@@ -28,7 +28,6 @@ export class AlbumComponent implements OnInit {
     });
     this.route.params.subscribe(value => {
       this.id = value.id;
-      this.storage.ref(this.id).
     });
   }
 
