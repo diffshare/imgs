@@ -8,15 +8,21 @@ import {AngularFireModule} from '@angular/fire';
 import {environment} from '../environments/environment';
 import {AngularFirestoreModule} from '@angular/fire/firestore';
 import {AngularFireStorageModule, StorageBucket} from '@angular/fire/storage';
+import { HomeComponent } from './home/home.component';
+import { AlbumComponent } from './album/album.component';
+import {FormsModule} from '@angular/forms';
 
 @NgModule({
   declarations: [
-    AppComponent
+    AppComponent,
+    HomeComponent,
+    AlbumComponent
   ],
   imports: [
     BrowserModule,
     AppRoutingModule,
     FileDropModule,
+    FormsModule,
     AngularFireModule.initializeApp(environment.firebase),
     AngularFireStorageModule
   ],

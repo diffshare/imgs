@@ -1,0 +1,16 @@
+<p>
+  画像を選択
+  <input type="file" multiple (change)="append($event.target.files)" />
+</p>
+
+<p>
+  待機: {{uploadFiles.length}}
+  読み込み: {{readFiles.length}}
+  暗号化: {{encryptedFiles.length}}
+</p>
+
+<ol>
+  <li>画像のファイル名のままアップロードされますので、秘匿すべき情報はファイル名に含まないこと。</li>
+  <li>画像のファイル名に従って画像が整列されます。（ファイルのメタ情報から並び替えるのとどちらが良いだろう。）</li>
+  <li>アルバム名の変更は、ストレージのディレクトリ名の変更なので、上手くやればできそう。</li>
+</ol>
