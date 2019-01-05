@@ -2,6 +2,7 @@ import {Component, OnInit} from '@angular/core';
 import {FileSystemFileEntry} from 'ngx-file-drop';
 import {ActivatedRoute} from '@angular/router';
 import {AngularFireStorage} from '@angular/fire/storage';
+import {HttpClient} from '@angular/common/http';
 
 @Component({
   selector: 'app-album',
@@ -14,12 +15,14 @@ export class AlbumComponent implements OnInit {
   readFiles: UploadingFile[] = [];
   encryptedFiles: UploadingFile[] = [];
   key: string;
+  fileList: string[] = [];
 
   encrypting: boolean;
   uploading: boolean;
   private id: string;
+  imageList: string[] = [];
 
-  constructor(private route: ActivatedRoute, private storage: AngularFireStorage) {
+  constructor(private route: ActivatedRoute, private storage: AngularFireStorage, private http: HttpClient) {
   }
 
   ngOnInit() {
@@ -28,7 +31,36 @@ export class AlbumComponent implements OnInit {
     });
     this.route.params.subscribe(value => {
       this.id = value.id;
+      this.loadFileList();
     });
+  }
+
+  async loadFileList() {
+    const ref = this.storage.ref(this.id + '/filelist');
+    const url = await ref.getDownloadURL().toPromise();
+    const response = await this.http.get(url, {
+      responseType: 'arraybuffer'
+    }).toPromise();
+    const iv = response.slice(0, 12);
+    const data = response.slice(12);
+    this.importKey().then(key => {
+      console.log(response);
+      return window.crypto.subtle.decrypt({
+        name: 'AES-GCM',
+        iv: iv
+      }, key, data);
+    }).then(value => {
+      const json = this.buffer_to_string(value);
+      this.fileList = JSON.parse(json);
+      this.fileList.forEach(async name => {
+        const image = await this.loadImage(name);
+        this.imageList.push(image);
+      });
+    });
+  }
+
+  buffer_to_string(buf) {
+    return String.fromCharCode.apply('', new Uint16Array(buf));
   }
 
   append(files: FileList) {
@@ -89,19 +121,27 @@ export class AlbumComponent implements OnInit {
     }
 
     const file = this.readFiles[0];
+    const iv = window.crypto.getRandomValues(new Uint8Array(12));
 
     this.importKey().then(key => {
       return window.crypto.subtle.encrypt({
         name: 'AES-GCM',
-        iv: window.crypto.getRandomValues(new Uint8Array(12))
+        iv: iv,
       }, key, file.buffer);
     }).then(value => {
-      file.buffer = value;
+      file.buffer = this.concat(iv.buffer as ArrayBuffer, value);
       this.encryptedFiles.push(file);
       this.readFiles.shift();
       this.startUpload();
       this.encrypt();
     });
+  }
+
+  concat(buffer1: ArrayBuffer, buffer2: ArrayBuffer): ArrayBuffer {
+    const tmp = new Uint8Array(buffer1.byteLength + buffer2.byteLength);
+    tmp.set(new Uint8Array(buffer1), 0);
+    tmp.set(new Uint8Array(buffer2), buffer1.byteLength);
+    return tmp.buffer as ArrayBuffer;
   }
 
   startUpload() {
@@ -124,9 +164,62 @@ export class AlbumComponent implements OnInit {
     const ref = this.storage.ref(this.id + '/' + file.name);
     console.log(ref);
     ref.put(file.buffer).then(a => {
+      this.fileList.push(file.name);
+      this.updateFileList();
+
       this.encryptedFiles.shift();
       this.upload();
     });
+  }
+
+  updateFileList() {
+
+    const json = JSON.stringify(this.fileList);
+    const iv = window.crypto.getRandomValues(new Uint8Array(12));
+
+    this.importKey().then(key => {
+      return window.crypto.subtle.encrypt({
+        name: 'AES-GCM',
+        iv: iv,
+      }, key, this.string_to_buffer(json) as ArrayBuffer);
+    }).then(value => {
+      const ref = this.storage.ref(this.id + '/filelist');
+      return ref.put(this.concat(iv.buffer as ArrayBuffer, value));
+    }).then(value => {
+      console.log('update');
+    });
+  }
+
+  string_to_buffer(src): ArrayBufferLike {
+    return (new Uint16Array([].map.call(src, function (c) {
+      return c.charCodeAt(0);
+    }))).buffer;
+  }
+
+  async loadImage(name: string) {
+    if (name == null) { return; }
+    console.log('loadImage');
+    const ref = this.storage.ref(this.id + '/' + name);
+    const url = await ref.getDownloadURL().toPromise();
+    console.log(url);
+    const buffer = await this.http.get(url, {responseType: 'arraybuffer'}).toPromise();
+    const key = await this.importKey();
+    const iv = buffer.slice(0, 12);
+    const data = buffer.slice(12);
+    const dec = await window.crypto.subtle.encrypt({
+      name: 'AES-GCM',
+      iv: iv,
+    }, key, data);
+    const blob = new Blob([dec], {type: 'image/jpeg'});
+    const promise = new Promise<string>(resolve => {
+      const reader = new FileReader();
+      reader.onload = ev => {
+        resolve(reader.result as string);
+      };
+      reader.readAsDataURL(blob);
+    });
+    const dataURL = await promise;
+    return dataURL;
   }
 }
 
