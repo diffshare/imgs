@@ -3,6 +3,7 @@ import {ActivatedRoute} from '@angular/router';
 import {AngularFireStorage} from '@angular/fire/storage';
 import {HttpClient} from '@angular/common/http';
 
+
 @Component({
   selector: 'app-album',
   templateUrl: './album.component.html',
@@ -16,6 +17,15 @@ export class AlbumComponent implements OnInit {
   key: string;
   fileList: string[] = [];
 
+  loading = false;
+  hasFileList: boolean;
+  validFileList: boolean;
+
+  get uploadable(): boolean {
+    // 読み込み中か || ファイルリストを持っていないか || 持っているがファイルリストを復号できる正当な鍵を持っている場合に投稿可能
+    return !this.loading || !this.hasFileList || (this.hasFileList && this.validFileList);
+  }
+
   encrypting: boolean;
   uploading: boolean;
   private id: string;
@@ -27,6 +37,7 @@ export class AlbumComponent implements OnInit {
   ngOnInit() {
     this.route.fragment.subscribe(value => {
       this.key = value.substring(2);
+      this.loadFileList();
     });
     this.route.params.subscribe(value => {
       this.id = value.id;
@@ -35,27 +46,40 @@ export class AlbumComponent implements OnInit {
   }
 
   async loadFileList() {
-    const ref = this.storage.ref(this.id + '/filelist');
-    const url = await ref.getDownloadURL().toPromise();
-    const response = await this.http.get(url, {
-      responseType: 'arraybuffer'
-    }).toPromise();
-    const iv = response.slice(0, 12);
-    const data = response.slice(12);
-    this.importKey().then(key => {
-      console.log(response);
-      return window.crypto.subtle.decrypt({
+    if (this.loading) {
+      return;
+    }
+    if (!this.key || !this.id) {
+      return;
+    } // idと鍵の双方が存在しないと
+    try {
+      this.loading = true;
+      const ref = this.storage.ref(this.id + '/filelist');
+      this.hasFileList = false;
+      const url = await ref.getDownloadURL().toPromise();
+      this.hasFileList = true;
+      const response = await this.http.get(url, {responseType: 'arraybuffer'}).toPromise();
+      const iv = response.slice(0, 12);
+      const data = response.slice(12);
+      const key = await this.importKey();
+      this.validFileList = false;
+      const decrypted = await window.crypto.subtle.decrypt({
         name: 'AES-GCM',
         iv: iv
       }, key, data);
-    }).then(value => {
-      const json = this.buffer_to_string(value);
+      this.validFileList = true;
+      const json = this.buffer_to_string(decrypted);
       this.fileList = JSON.parse(json);
+      this.imageList = [];
       this.fileList.forEach(async name => {
         const image = await this.loadImage(name);
-        this.imageList.push(image);
+        const index = this.fileList.indexOf(name);
+        this.imageList[index] = image;
       });
-    });
+    } catch (e) {
+      console.error(e);
+    }
+    this.loading = false;
   }
 
   buffer_to_string(buf) {
@@ -196,7 +220,9 @@ export class AlbumComponent implements OnInit {
   }
 
   async loadImage(name: string) {
-    if (name == null) { return; }
+    if (name == null) {
+      return;
+    }
     console.log('loadImage');
     const ref = this.storage.ref(this.id + '/' + name);
     const url = await ref.getDownloadURL().toPromise();
