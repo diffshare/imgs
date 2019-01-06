@@ -14,6 +14,7 @@ export class AlbumComponent implements OnInit {
   uploadFiles: File[] = [];
   readFiles: UploadingFile[] = [];
   encryptedFiles: UploadingFile[] = [];
+  completedCount = 0;
   key: string;
   fileList: string[] = [];
 
@@ -191,6 +192,7 @@ export class AlbumComponent implements OnInit {
       this.updateFileList();
 
       this.encryptedFiles.shift();
+      this.completedCount += 1;
       this.upload();
     });
   }
