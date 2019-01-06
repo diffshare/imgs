@@ -150,7 +150,7 @@ export class AlbumComponent implements OnInit {
     this.encrypt();
   }
 
-  encrypt() {
+  async encrypt() {
     if (this.readFiles.length === 0) {
       this.encrypting = false;
       return;
@@ -159,18 +159,17 @@ export class AlbumComponent implements OnInit {
     const file = this.readFiles[0];
     const iv = window.crypto.getRandomValues(new Uint8Array(12));
 
-    this.importKey().then(key => {
-      return window.crypto.subtle.encrypt({
+    const key = await this.importKey();
+    const encrypted = await window.crypto.subtle.encrypt({
         name: 'AES-GCM',
         iv: iv,
-      }, key, file.buffer);
-    }).then(value => {
-      file.buffer = this.concat(iv.buffer as ArrayBuffer, value);
-      this.encryptedFiles.push(file);
-      this.readFiles.shift();
-      this.startUpload();
-      this.encrypt();
-    });
+    }, key, file.buffer);
+
+    file.buffer = this.concat(iv.buffer as ArrayBuffer, encrypted);
+    this.encryptedFiles.push(file);
+    this.readFiles.shift();
+    this.startUpload();
+    this.encrypt();
   }
 
   concat(buffer1: ArrayBuffer, buffer2: ArrayBuffer): ArrayBuffer {
@@ -189,7 +188,7 @@ export class AlbumComponent implements OnInit {
     this.upload();
   }
 
-  upload() {
+  async upload() {
     if (this.encryptedFiles.length === 0) {
       this.uploading = false;
       return;
@@ -198,15 +197,13 @@ export class AlbumComponent implements OnInit {
     const file = this.encryptedFiles[0];
 
     const ref = this.storage.ref(this.id + '/' + file.name);
-    console.log(ref);
-    ref.put(file.buffer).then(a => {
-      this.fileList.push(file.name);
-      this.updateFileList();
+    await ref.put(file.buffer);
+    this.fileList.push(file.name);
+    await this.updateFileList();
 
-      this.encryptedFiles.shift();
-      this.completedCount += 1;
-      this.upload();
-    });
+    this.encryptedFiles.shift();
+    this.completedCount += 1;
+    this.upload();
   }
 
   // ファイルリストの更新
