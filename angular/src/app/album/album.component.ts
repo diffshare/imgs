@@ -12,6 +12,19 @@ import {DomSanitizer, SafeUrl} from '@angular/platform-browser';
 })
 export class AlbumComponent implements OnInit {
 
+  get uploadable(): boolean {
+    // 読み込み中か || ファイルリストを持っていないか || 持っているがファイルリストを復号できる正当な鍵を持っている場合に投稿可能
+    return !this.loading || !this.hasFileList || (this.hasFileList && this.validFileList);
+  }
+
+  constructor(
+    private route: ActivatedRoute,
+    private storage: AngularFireStorage,
+    private http: HttpClient,
+    private sanitizer: DomSanitizer
+  ) {
+  }
+
   uploadFiles: File[] = [];
   readFiles: UploadingFile[] = [];
   encryptedFiles: UploadingFile[] = [];
@@ -23,22 +36,15 @@ export class AlbumComponent implements OnInit {
   hasFileList: boolean;
   validFileList: boolean;
 
-  get uploadable(): boolean {
-    // 読み込み中か || ファイルリストを持っていないか || 持っているがファイルリストを復号できる正当な鍵を持っている場合に投稿可能
-    return !this.loading || !this.hasFileList || (this.hasFileList && this.validFileList);
-  }
-
   encrypting: boolean;
   uploading: boolean;
   private id: string;
   imageList: SafeUrl[] = [];
 
-  constructor(
-    private route: ActivatedRoute,
-    private storage: AngularFireStorage,
-    private http: HttpClient,
-    private sanitizer: DomSanitizer
-  ) {
+  static stringToBuffer(src): ArrayBufferLike {
+    return (new Uint16Array([].map.call(src, function (c) {
+      return c.charCodeAt(0);
+    }))).buffer;
   }
 
   ngOnInit() {
@@ -203,38 +209,27 @@ export class AlbumComponent implements OnInit {
     });
   }
 
-  updateFileList() {
+  // ファイルリストの更新
+  async updateFileList() {
 
     const json = JSON.stringify(this.fileList);
     const iv = window.crypto.getRandomValues(new Uint8Array(12));
 
-    this.importKey().then(key => {
-      return window.crypto.subtle.encrypt({
-        name: 'AES-GCM',
-        iv: iv,
-      }, key, this.string_to_buffer(json) as ArrayBuffer);
-    }).then(value => {
-      const ref = this.storage.ref(this.id + '/filelist');
-      return ref.put(this.concat(iv.buffer as ArrayBuffer, value));
-    }).then(value => {
-      console.log('update');
-    });
-  }
+    const key = await this.importKey();
+    const decrypted = await window.crypto.subtle.encrypt({
+      name: 'AES-GCM',
+      iv: iv,
+    }, key, AlbumComponent.stringToBuffer(json) as ArrayBuffer);
 
-  string_to_buffer(src): ArrayBufferLike {
-    return (new Uint16Array([].map.call(src, function (c) {
-      return c.charCodeAt(0);
-    }))).buffer;
+    const ref = this.storage.ref(this.id + '/filelist');
+    ref.put(this.concat(iv.buffer as ArrayBuffer, decrypted));
   }
 
   async loadImage(name: string) {
-    if (name == null) {
-      return;
-    }
+    if (name == null) { return; }
     console.log('loadImage');
     const ref = this.storage.ref(this.id + '/' + name);
     const url = await ref.getDownloadURL().toPromise();
-    console.log(url);
     const buffer = await this.http.get(url, {responseType: 'arraybuffer'}).toPromise();
     const key = await this.importKey();
     const iv = buffer.slice(0, 12);
