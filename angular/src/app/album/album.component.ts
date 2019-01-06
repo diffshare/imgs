@@ -1,5 +1,4 @@
 import {Component, OnInit} from '@angular/core';
-import {FileSystemFileEntry} from 'ngx-file-drop';
 import {ActivatedRoute} from '@angular/router';
 import {AngularFireStorage} from '@angular/fire/storage';
 import {HttpClient} from '@angular/common/http';
