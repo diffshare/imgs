@@ -2,6 +2,7 @@ import {Component, OnInit} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {AngularFireStorage} from '@angular/fire/storage';
 import {HttpClient} from '@angular/common/http';
+import {DomSanitizer, SafeUrl} from '@angular/platform-browser';
 
 
 @Component({
@@ -30,9 +31,14 @@ export class AlbumComponent implements OnInit {
   encrypting: boolean;
   uploading: boolean;
   private id: string;
-  imageList: string[] = [];
+  imageList: SafeUrl[] = [];
 
-  constructor(private route: ActivatedRoute, private storage: AngularFireStorage, private http: HttpClient) {
+  constructor(
+    private route: ActivatedRoute,
+    private storage: AngularFireStorage,
+    private http: HttpClient,
+    private sanitizer: DomSanitizer
+  ) {
   }
 
   ngOnInit() {
@@ -238,15 +244,8 @@ export class AlbumComponent implements OnInit {
       iv: iv,
     }, key, data);
     const blob = new Blob([dec], {type: 'image/jpeg'});
-    const promise = new Promise<string>(resolve => {
-      const reader = new FileReader();
-      reader.onload = ev => {
-        resolve(reader.result as string);
-      };
-      reader.readAsDataURL(blob);
-    });
-    const dataURL = await promise;
-    return dataURL;
+    const dataURL = URL.createObjectURL(blob);
+    return this.sanitizer.bypassSecurityTrustUrl(dataURL);
   }
 }
 
