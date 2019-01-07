@@ -20,8 +20,5 @@
 </ol>
 
 <div *ngFor="let image of imageList">
-  <img [src]="image?.url" style="width: 300px;"/>
-  <div>
-    {{image?.tags | json}}
-  </div>
+  <img [src]="image?.url" />
 </div>

@@ -161,8 +161,8 @@ export class AlbumComponent implements OnInit {
 
     const key = await this.importKey();
     const encrypted = await window.crypto.subtle.encrypt({
-        name: 'AES-GCM',
-        iv: iv,
+      name: 'AES-GCM',
+      iv: iv,
     }, key, file.buffer);
 
     file.buffer = this.concat(iv.buffer as ArrayBuffer, encrypted);
@@ -223,7 +223,9 @@ export class AlbumComponent implements OnInit {
   }
 
   async loadImage(name: string) {
-    if (name == null) { return; }
+    if (name == null) {
+      return;
+    }
     console.log('loadImage');
     const ref = this.storage.ref(this.id + '/' + name);
     const url = await ref.getDownloadURL().toPromise();
@@ -237,15 +239,82 @@ export class AlbumComponent implements OnInit {
     }, key, data);
     const blob = new Blob([dec], {type: 'image/jpeg'});
     const dataURL = URL.createObjectURL(blob);
-    const safeUrl = this.sanitizer.bypassSecurityTrustUrl(dataURL);
 
     const decryptedImage = new DecryptedImage();
-    decryptedImage.url = safeUrl;
-
     const tags = EXIF.readFromBinaryFile(dec);
     decryptedImage.tags = tags;
 
+    const rotated = await this.rotate(dataURL, tags);
+    const safeUrl = this.sanitizer.bypassSecurityTrustUrl(rotated);
+
+    decryptedImage.url = safeUrl;
+
+
     return decryptedImage;
+  }
+
+  // see: https://stackoverflow.com/questions/20600800/js-client-side-exif-orientation-rotate-and-mirror-jpeg-images/31273162#31273162
+  rotate(url: string, tags: any) {
+    const canvas = document.createElement('canvas');
+
+    const ctx = canvas.getContext('2d');
+    const width = tags['PixelXDimension'];
+    const height = tags['PixelYDimension'];
+    const orientation = tags['Orientation'];
+
+    const img = new Image();
+    img.src = url;
+    img.width = width;
+    img.height = height;
+
+    if ([5, 6, 7, 8].indexOf(orientation) > -1) {
+      canvas.width = img.height;
+      canvas.height = img.width;
+    } else {
+      canvas.width = img.width;
+      canvas.height = img.height;
+    }
+
+    return new Promise<string>(resolve => {
+      img.onload = ev => {
+        switch (orientation) {
+          case 2:
+            ctx.transform(-1, 0, 0, 1, img.width, 0);
+            break;
+          case 3:
+            ctx.transform(-1, 0, 0, -1, img.width, img.height);
+            break;
+          case 4:
+            ctx.transform(1, 0, 0, -1, 0, img.height);
+            break;
+          case 5:
+            ctx.transform(0, 1, 1, 0, 0, 0);
+            break;
+          case 6:
+            ctx.transform(0, 1, -1, 0, img.height, 0);
+            break;
+          case 7:
+            ctx.transform(0, -1, -1, 0, img.height, img.width);
+            break;
+          case 8:
+            ctx.transform(0, -1, 1, 0, 0, img.width);
+            break;
+        }
+        ctx.drawImage(img, 0, 0);
+        const type = 'image/jpeg';
+        const dataURL = canvas.toDataURL(type);
+        const bin = atob(dataURL.split(',')[1]);
+        // 空の Uint8Array ビューを作る
+        const buffer = new Uint8Array(bin.length);
+        // Uint8Array ビューに 1 バイトずつ値を埋める
+        for (let i = 0; i < bin.length; i++) {
+          buffer[i] = bin.charCodeAt(i);
+        }
+        // Uint8Array ビューのバッファーを抜き出し、それを元に Blob を作る
+        const blob = new Blob([buffer.buffer as ArrayBuffer], {type: type});
+        resolve(URL.createObjectURL(blob));
+      };
+    });
   }
 }
 
@@ -259,4 +328,12 @@ class UploadingFile {
 class DecryptedImage {
   url: SafeUrl;
   tags: any;
+
+  get orientation(): number {
+    if (this.tags == null) {
+      return null;
+    }
+
+    return this.tags['Orientation'];
+  }
 }
