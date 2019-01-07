@@ -29,6 +29,7 @@ export class AlbumComponent implements OnInit {
   readFiles: UploadingFile[] = [];
   encryptedFiles: UploadingFile[] = [];
   completedCount = 0;
+  loadCompletedCount = 0;
   key: string;
   fileList: string[] = [];
 
@@ -84,10 +85,12 @@ export class AlbumComponent implements OnInit {
       const json = this.buffer_to_string(decrypted);
       this.fileList = JSON.parse(json);
       this.imageList = [];
+      this.loadCompletedCount = 0;
       this.fileList.forEach(async name => {
         const image = await this.loadImage(name);
         const index = this.fileList.indexOf(name);
         this.imageList[index] = image;
+        this.loadCompletedCount += 1;
       });
     } catch (e) {
       console.error(e);

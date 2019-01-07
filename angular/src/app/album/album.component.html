@@ -5,6 +5,8 @@
 
 <ul>
   <li>読み込み処理中: {{loading}}</li>
+  <li>全画像数: {{fileList.length}}</li>
+  <li>読み込み完了画像数: {{loadCompletedCount}}</li>
   <li>名前空間使用中: {{hasFileList}}</li>
   <li>暗号鍵の検証に成功: {{validFileList}}</li>
   <li>待機数: {{uploadFiles.length}}</li>
@@ -20,5 +22,5 @@
 </ol>
 
 <div *ngFor="let image of imageList">
-  <img [src]="image?.url" />
+  <img [src]="image?.url" *ngIf="image?.url" />
 </div>
