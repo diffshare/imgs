@@ -3,7 +3,7 @@ import {ActivatedRoute} from '@angular/router';
 import {AngularFireStorage} from '@angular/fire/storage';
 import {HttpClient} from '@angular/common/http';
 import {DomSanitizer, SafeUrl} from '@angular/platform-browser';
-
+import * as EXIF from 'exif-js';
 
 @Component({
   selector: 'app-album',
@@ -39,7 +39,7 @@ export class AlbumComponent implements OnInit {
   encrypting: boolean;
   uploading: boolean;
   private id: string;
-  imageList: SafeUrl[] = [];
+  imageList: DecryptedImage[] = [];
 
   static stringToBuffer(src): ArrayBufferLike {
     return (new Uint16Array([].map.call(src, function (c) {
@@ -237,7 +237,15 @@ export class AlbumComponent implements OnInit {
     }, key, data);
     const blob = new Blob([dec], {type: 'image/jpeg'});
     const dataURL = URL.createObjectURL(blob);
-    return this.sanitizer.bypassSecurityTrustUrl(dataURL);
+    const safeUrl = this.sanitizer.bypassSecurityTrustUrl(dataURL);
+
+    const decryptedImage = new DecryptedImage();
+    decryptedImage.url = safeUrl;
+
+    const tags = EXIF.readFromBinaryFile(dec);
+    decryptedImage.tags = tags;
+
+    return decryptedImage;
   }
 }
 
@@ -246,4 +254,9 @@ class UploadingFile {
   constructor(public name: string, public buffer: ArrayBuffer) {
 
   }
+}
+
+class DecryptedImage {
+  url: SafeUrl;
+  tags: any;
 }
