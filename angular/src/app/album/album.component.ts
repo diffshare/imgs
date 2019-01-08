@@ -245,7 +245,7 @@ export class AlbumComponent implements OnInit {
 
     const decryptedImage = new DecryptedImage();
     const tags = EXIF.readFromBinaryFile(dec);
-    if (tags) {
+    if (tags && tags['Orientation']) {
       decryptedImage.tags = tags;
       const rotated = await this.rotate(dataURL, tags);
       const safeUrl = this.sanitizer.bypassSecurityTrustUrl(rotated);
