@@ -14,7 +14,7 @@ export class AlbumComponent implements OnInit {
 
   get uploadable(): boolean {
     // 読み込み中か || ファイルリストを持っていないか || 持っているがファイルリストを復号できる正当な鍵を持っている場合に投稿可能
-    return !this.loading || !this.hasFileList || (this.hasFileList && this.validFileList);
+    return !this.loading && (!this.hasFileList || (this.hasFileList && this.validFileList));
   }
 
   constructor(
