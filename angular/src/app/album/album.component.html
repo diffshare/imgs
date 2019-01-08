@@ -32,5 +32,12 @@
     <span *ngIf="image?.tags['FocalLengthIn35mmFilm']">
     焦点距離（35mm換算）: {{image?.tags['FocalLengthIn35mmFilm']}}mm
     </span>
+    <label>
+      <input type="checkbox" [(ngModel)]="showFullExif" />
+      EXIFをすべて表示
+    </label>
+    <div *ngIf="showFullExif">
+      {{image?.tags | json}}
+    </div>
   </div>
 </div>
