@@ -25,7 +25,7 @@
   <img [src]="image?.url" *ngIf="image?.url" />
   <div *ngIf="image?.tags">
     Model: {{image?.tags['Model']}},
-    SS: 1/{{1 / image?.tags['ExposureTime']}},
+    SS: {{image?.exposureTime}},
     F: {{image?.tags['FNumber']}},
     ISO: {{image?.tags['ISOSpeedRatings']}},
     焦点距離: {{image?.tags['FocalLength']}}mm,

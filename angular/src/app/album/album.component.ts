@@ -340,4 +340,17 @@ class DecryptedImage {
 
     return this.tags['Orientation'];
   }
+
+  get exposureTime(): string {
+    if (this.tags == null) {
+      return null;
+    }
+
+    // 1秒以上のときはそのまま
+    if (this.tags['ExposureTime'] >= 1) {
+      return this.tags['ExposureTime'];
+    }
+
+    return '1/' + (1 / this.tags['ExposureTime']);
+  }
 }
