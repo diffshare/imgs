@@ -308,16 +308,22 @@ export class AlbumComponent implements OnInit {
     }
     ctx.drawImage(img, 0, 0);
     const type = 'image/jpeg';
-    const dataURL = canvas.toDataURL(type);
-    const bin = atob(dataURL.split(',')[1]);
-    // 空の Uint8Array ビューを作る
-    const buffer = new Uint8Array(bin.length);
-    // Uint8Array ビューに 1 バイトずつ値を埋める
-    for (let i = 0; i < bin.length; i++) {
-      buffer[i] = bin.charCodeAt(i);
-    }
-    // Uint8Array ビューのバッファーを抜き出し、それを元に Blob を作る
-    const blob = new Blob([buffer.buffer as ArrayBuffer], {type: type});
+    const blob = await new Promise<Blob>(resolve => {
+      if (canvas.toBlob) {
+        canvas.toBlob(blob => resolve(blob), type);
+      } else {
+        const dataURL = canvas.toDataURL(type);
+        const bin = atob(dataURL.split(',')[1]);
+        // 空の Uint8Array ビューを作る
+        const buffer = new Uint8Array(bin.length);
+        // Uint8Array ビューに 1 バイトずつ値を埋める
+        for (let i = 0; i < bin.length; i++) {
+          buffer[i] = bin.charCodeAt(i);
+        }
+        // Uint8Array ビューのバッファーを抜き出し、それを元に Blob を作る
+        resolve(new Blob([buffer.buffer as ArrayBuffer], {type: type}));
+      }
+    });
     return URL.createObjectURL(blob);
   }
 }
