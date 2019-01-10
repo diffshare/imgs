@@ -257,7 +257,7 @@ export class AlbumComponent implements OnInit {
   }
 
   // see: https://stackoverflow.com/questions/20600800/js-client-side-exif-orientation-rotate-and-mirror-jpeg-images/31273162#31273162
-  rotate(url: string, tags: any) {
+  async rotate(url: string, tags: any) {
     const canvas = document.createElement('canvas');
 
     const ctx = canvas.getContext('2d');
@@ -265,8 +265,13 @@ export class AlbumComponent implements OnInit {
     const height = tags['PixelYDimension'];
     const orientation = tags['Orientation'];
 
-    const img = new Image();
-    img.src = url;
+    const img = await new Promise<any>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = (err) => reject(err);
+      img.src = url;
+    });
+
     img.width = width;
     img.height = height;
 
@@ -278,33 +283,35 @@ export class AlbumComponent implements OnInit {
       canvas.height = img.height;
     }
 
-    return new Promise<string>(resolve => {
-      img.onload = ev => {
-        switch (orientation) {
-          case 2:
-            ctx.transform(-1, 0, 0, 1, img.width, 0);
-            break;
-          case 3:
-            ctx.transform(-1, 0, 0, -1, img.width, img.height);
-            break;
-          case 4:
-            ctx.transform(1, 0, 0, -1, 0, img.height);
-            break;
-          case 5:
-            ctx.transform(0, 1, 1, 0, 0, 0);
-            break;
-          case 6:
-            ctx.transform(0, 1, -1, 0, img.height, 0);
-            break;
-          case 7:
-            ctx.transform(0, -1, -1, 0, img.height, img.width);
-            break;
-          case 8:
-            ctx.transform(0, -1, 1, 0, 0, img.width);
-            break;
-        }
-        ctx.drawImage(img, 0, 0);
-        const type = 'image/jpeg';
+    switch (orientation) {
+      case 2:
+        ctx.transform(-1, 0, 0, 1, img.width, 0);
+        break;
+      case 3:
+        ctx.transform(-1, 0, 0, -1, img.width, img.height);
+        break;
+      case 4:
+        ctx.transform(1, 0, 0, -1, 0, img.height);
+        break;
+      case 5:
+        ctx.transform(0, 1, 1, 0, 0, 0);
+        break;
+      case 6:
+        ctx.transform(0, 1, -1, 0, img.height, 0);
+        break;
+      case 7:
+        ctx.transform(0, -1, -1, 0, img.height, img.width);
+        break;
+      case 8:
+        ctx.transform(0, -1, 1, 0, 0, img.width);
+        break;
+    }
+    ctx.drawImage(img, 0, 0);
+    const type = 'image/jpeg';
+    const blob = await new Promise<Blob>(resolve => {
+      if (canvas.toBlob) {
+        canvas.toBlob(blob => resolve(blob), type);
+      } else {
         const dataURL = canvas.toDataURL(type);
         const bin = atob(dataURL.split(',')[1]);
         // 空の Uint8Array ビューを作る
@@ -314,10 +321,10 @@ export class AlbumComponent implements OnInit {
           buffer[i] = bin.charCodeAt(i);
         }
         // Uint8Array ビューのバッファーを抜き出し、それを元に Blob を作る
-        const blob = new Blob([buffer.buffer as ArrayBuffer], {type: type});
-        resolve(URL.createObjectURL(blob));
-      };
+        resolve(new Blob([buffer.buffer as ArrayBuffer], {type: type}));
+      }
     });
+    return URL.createObjectURL(blob);
   }
 }
 
