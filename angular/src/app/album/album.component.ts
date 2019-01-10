@@ -4,6 +4,7 @@ import {AngularFireStorage} from '@angular/fire/storage';
 import {HttpClient} from '@angular/common/http';
 import {DomSanitizer, SafeUrl} from '@angular/platform-browser';
 import * as EXIF from 'exif-js';
+import {combineLatest} from 'rxjs';
 
 @Component({
   selector: 'app-album',
@@ -48,14 +49,25 @@ export class AlbumComponent implements OnInit {
     }))).buffer;
   }
 
+  static bufferToString(buf) {
+    return String.fromCharCode.apply('', new Uint16Array(buf));
+  }
+
+  static concat(buffer1: ArrayBuffer, buffer2: ArrayBuffer): ArrayBuffer {
+    const tmp = new Uint8Array(buffer1.byteLength + buffer2.byteLength);
+    tmp.set(new Uint8Array(buffer1), 0);
+    tmp.set(new Uint8Array(buffer2), buffer1.byteLength);
+    return tmp.buffer as ArrayBuffer;
+  }
+
   ngOnInit() {
-    this.route.fragment.subscribe(value => {
-      this.key = value.substring(2);
-      this.loadFileList();
-    });
-    this.route.params.subscribe(value => {
-      this.id = value.id;
-      this.loadFileList();
+    combineLatest(
+      this.route.fragment,
+      this.route.params
+    ).subscribe(value => {
+      this.key = value[0].substring(2);
+      this.id = value[1].id;
+      return this.loadFileList();
     });
   }
 
@@ -82,7 +94,7 @@ export class AlbumComponent implements OnInit {
         iv: iv
       }, key, data);
       this.validFileList = true;
-      const json = this.buffer_to_string(decrypted);
+      const json = AlbumComponent.bufferToString(decrypted);
       this.fileList = JSON.parse(json);
       this.imageList = [];
       this.loadCompletedCount = 0;
@@ -96,10 +108,6 @@ export class AlbumComponent implements OnInit {
       console.error(e);
     }
     this.loading = false;
-  }
-
-  buffer_to_string(buf) {
-    return String.fromCharCode.apply('', new Uint16Array(buf));
   }
 
   append(files: FileList) {
@@ -168,18 +176,11 @@ export class AlbumComponent implements OnInit {
       iv: iv,
     }, key, file.buffer);
 
-    file.buffer = this.concat(iv.buffer as ArrayBuffer, encrypted);
+    file.buffer = AlbumComponent.concat(iv.buffer as ArrayBuffer, encrypted);
     this.encryptedFiles.push(file);
     this.readFiles.shift();
     this.startUpload();
     this.encrypt();
-  }
-
-  concat(buffer1: ArrayBuffer, buffer2: ArrayBuffer): ArrayBuffer {
-    const tmp = new Uint8Array(buffer1.byteLength + buffer2.byteLength);
-    tmp.set(new Uint8Array(buffer1), 0);
-    tmp.set(new Uint8Array(buffer2), buffer1.byteLength);
-    return tmp.buffer as ArrayBuffer;
   }
 
   startUpload() {
@@ -222,14 +223,13 @@ export class AlbumComponent implements OnInit {
     }, key, AlbumComponent.stringToBuffer(json) as ArrayBuffer);
 
     const ref = this.storage.ref(this.id + '/filelist');
-    ref.put(this.concat(iv.buffer as ArrayBuffer, decrypted));
+    ref.put(AlbumComponent.concat(iv.buffer as ArrayBuffer, decrypted));
   }
 
   async loadImage(name: string) {
     if (name == null) {
       return;
     }
-    console.log('loadImage');
     const ref = this.storage.ref(this.id + '/' + name);
     const url = await ref.getDownloadURL().toPromise();
     const buffer = await this.http.get(url, {responseType: 'arraybuffer'}).toPromise();
@@ -246,7 +246,7 @@ export class AlbumComponent implements OnInit {
     const decryptedImage = new DecryptedImage();
     const tags = EXIF.readFromBinaryFile(dec);
     decryptedImage.tags = tags;
-    if (tags && tags['Orientation'] && tags['Orientation'] != 1) {
+    if (tags && tags['Orientation'] && tags['Orientation'] !== 1) {
       const rotated = await this.rotate(dataURL, tags);
       decryptedImage.url = this.sanitizer.bypassSecurityTrustUrl(rotated);
     } else {
@@ -266,10 +266,10 @@ export class AlbumComponent implements OnInit {
     const orientation = tags['Orientation'];
 
     const img = await new Promise<any>((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = (err) => reject(err);
-      img.src = url;
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = (err) => reject(err);
+      image.src = url;
     });
 
     img.width = width;
@@ -310,17 +310,14 @@ export class AlbumComponent implements OnInit {
     const type = 'image/jpeg';
     const blob = await new Promise<Blob>(resolve => {
       if (canvas.toBlob) {
-        canvas.toBlob(blob => resolve(blob), type);
+        canvas.toBlob(result => resolve(result), type);
       } else {
         const dataURL = canvas.toDataURL(type);
         const bin = atob(dataURL.split(',')[1]);
-        // 空の Uint8Array ビューを作る
         const buffer = new Uint8Array(bin.length);
-        // Uint8Array ビューに 1 バイトずつ値を埋める
         for (let i = 0; i < bin.length; i++) {
           buffer[i] = bin.charCodeAt(i);
         }
-        // Uint8Array ビューのバッファーを抜き出し、それを元に Blob を作る
         resolve(new Blob([buffer.buffer as ArrayBuffer], {type: type}));
       }
     });
