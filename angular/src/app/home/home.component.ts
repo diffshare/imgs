@@ -1,5 +1,6 @@
 import {Component, OnInit} from '@angular/core';
 import {Router} from '@angular/router';
+import {TitleService} from '../service/title.service';
 
 @Component({
   selector: 'app-home',
@@ -10,10 +11,11 @@ export class HomeComponent implements OnInit {
 
   albumName: string;
 
-  constructor(private router: Router) {
+  constructor(private router: Router, private title: TitleService) {
   }
 
   ngOnInit() {
+    this.title.setTitle('Home');
   }
 
   createAlbum() {

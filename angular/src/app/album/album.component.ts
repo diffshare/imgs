@@ -6,6 +6,7 @@ import {DomSanitizer, SafeUrl} from '@angular/platform-browser';
 import * as EXIF from 'exif-js';
 import {combineLatest} from 'rxjs';
 import {JobQueue} from '../job/job-queue';
+import {TitleService} from '../service/title.service';
 
 @Component({
   selector: 'app-album',
@@ -23,7 +24,8 @@ export class AlbumComponent implements OnInit {
     private route: ActivatedRoute,
     private storage: AngularFireStorage,
     private http: HttpClient,
-    private sanitizer: DomSanitizer
+    private sanitizer: DomSanitizer,
+    private title: TitleService
   ) {
   }
 
@@ -70,6 +72,7 @@ export class AlbumComponent implements OnInit {
     ).subscribe(value => {
       this.key = value[0].substring(2);
       this.id = value[1].id;
+      this.title.setTitle(this.id);
       this.keyPromise = this.importKey();
       return this.loadFileList();
     });
