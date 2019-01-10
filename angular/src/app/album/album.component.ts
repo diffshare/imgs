@@ -5,6 +5,7 @@ import {HttpClient} from '@angular/common/http';
 import {DomSanitizer, SafeUrl} from '@angular/platform-browser';
 import * as EXIF from 'exif-js';
 import {combineLatest} from 'rxjs';
+import {JobQueue} from '../job/job-queue';
 
 @Component({
   selector: 'app-album',
@@ -26,9 +27,11 @@ export class AlbumComponent implements OnInit {
   ) {
   }
 
+  readQueue: JobQueue = new JobQueue('read');
+  encryptQueue: JobQueue = new JobQueue('encrypt');
+  uploadQueue: JobQueue = new JobQueue('upload');
+
   uploadFiles: File[] = [];
-  readFiles: UploadingFile[] = [];
-  encryptedFiles: UploadingFile[] = [];
   completedCount = 0;
   loadCompletedCount = 0;
   key: string;
@@ -38,8 +41,8 @@ export class AlbumComponent implements OnInit {
   hasFileList: boolean;
   validFileList: boolean;
 
-  encrypting: boolean;
-  uploading: boolean;
+  keyPromise: PromiseLike<CryptoKey>;
+
   private id: string;
   imageList: DecryptedImage[] = [];
 
@@ -67,6 +70,7 @@ export class AlbumComponent implements OnInit {
     ).subscribe(value => {
       this.key = value[0].substring(2);
       this.id = value[1].id;
+      this.keyPromise = this.importKey();
       return this.loadFileList();
     });
   }
@@ -87,7 +91,7 @@ export class AlbumComponent implements OnInit {
       const response = await this.http.get(url, {responseType: 'arraybuffer'}).toPromise();
       const iv = response.slice(0, 12);
       const data = response.slice(12);
-      const key = await this.importKey();
+      const key = await this.keyPromise;
       this.validFileList = false;
       const decrypted = await window.crypto.subtle.decrypt({
         name: 'AES-GCM',
@@ -113,25 +117,44 @@ export class AlbumComponent implements OnInit {
   append(files: FileList) {
     for (let i = 0; i < files.length; i++) {
       this.uploadFiles.push(files.item(i));
+      this.readQueue.enqueue(async () => {
+        const file = files.item(i);
+        const buffer = await new Promise<ArrayBuffer>(resolve => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as ArrayBuffer);
+          reader.readAsArrayBuffer(file);
+        });
+        const uploadingFile = new UploadingFile(file.name, buffer);
+        this.enqueueCrypto(uploadingFile);
+      });
     }
-    this.read();
   }
 
-  // 先頭を読み込み
-  read() {
-    if (this.uploadFiles.length === 0) {
-      return;
-    }
-    const file = this.uploadFiles[0];
+  enqueueCrypto(file: UploadingFile) {
+    this.encryptQueue.enqueue(async () => {
+      console.log('do enc');
+      const iv = window.crypto.getRandomValues(new Uint8Array(12));
 
-    const reader = new FileReader();
-    reader.onloadend = ev => {
-      this.readFiles.push(new UploadingFile(file.name, reader.result as ArrayBuffer));
-      this.uploadFiles.shift(); // 先頭を削除
-      this.startEncrypt();
-      this.read();
-    };
-    reader.readAsArrayBuffer(file);
+      const key = await this.keyPromise;
+      const encrypted = await window.crypto.subtle.encrypt({
+        name: 'AES-GCM',
+        iv: iv,
+      }, key, file.buffer);
+
+      file.buffer = AlbumComponent.concat(iv.buffer as ArrayBuffer, encrypted);
+      this.enqueueUpload(file);
+    });
+  }
+
+  enqueueUpload(file: UploadingFile) {
+    this.uploadQueue.enqueue(async () => {
+      const ref = this.storage.ref(this.id + '/' + file.name);
+      await ref.put(file.buffer);
+      this.fileList.push(file.name);
+      await this.updateFileList();
+
+      this.completedCount += 1;
+    });
   }
 
   importKey(): PromiseLike<CryptoKey> {
@@ -152,71 +175,13 @@ export class AlbumComponent implements OnInit {
     );
   }
 
-  startEncrypt() {
-    if (this.encrypting) {
-      return;
-    }
-
-    this.encrypting = true;
-    this.encrypt();
-  }
-
-  async encrypt() {
-    if (this.readFiles.length === 0) {
-      this.encrypting = false;
-      return;
-    }
-
-    const file = this.readFiles[0];
-    const iv = window.crypto.getRandomValues(new Uint8Array(12));
-
-    const key = await this.importKey();
-    const encrypted = await window.crypto.subtle.encrypt({
-      name: 'AES-GCM',
-      iv: iv,
-    }, key, file.buffer);
-
-    file.buffer = AlbumComponent.concat(iv.buffer as ArrayBuffer, encrypted);
-    this.encryptedFiles.push(file);
-    this.readFiles.shift();
-    this.startUpload();
-    this.encrypt();
-  }
-
-  startUpload() {
-    if (this.uploading) {
-      return;
-    }
-
-    this.uploading = true;
-    this.upload();
-  }
-
-  async upload() {
-    if (this.encryptedFiles.length === 0) {
-      this.uploading = false;
-      return;
-    }
-
-    const file = this.encryptedFiles[0];
-
-    const ref = this.storage.ref(this.id + '/' + file.name);
-    await ref.put(file.buffer);
-    this.fileList.push(file.name);
-    await this.updateFileList();
-
-    this.encryptedFiles.shift();
-    this.completedCount += 1;
-    this.upload();
-  }
-
   // ファイルリストの更新
   async updateFileList() {
 
     const json = JSON.stringify(this.fileList);
     const iv = window.crypto.getRandomValues(new Uint8Array(12));
 
-    const key = await this.importKey();
+    const key = await this.keyPromise;
     const decrypted = await window.crypto.subtle.encrypt({
       name: 'AES-GCM',
       iv: iv,
@@ -233,7 +198,7 @@ export class AlbumComponent implements OnInit {
     const ref = this.storage.ref(this.id + '/' + name);
     const url = await ref.getDownloadURL().toPromise();
     const buffer = await this.http.get(url, {responseType: 'arraybuffer'}).toPromise();
-    const key = await this.importKey();
+    const key = await this.keyPromise;
     const iv = buffer.slice(0, 12);
     const data = buffer.slice(12);
     const dec = await window.crypto.subtle.encrypt({
