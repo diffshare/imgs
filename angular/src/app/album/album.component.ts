@@ -118,6 +118,14 @@ export class AlbumComponent implements OnInit {
   }
 
   append(files: FileList) {
+    // 重複チェック
+    for (let i = 0; i < files.length; i++) {
+      if (this.fileList.indexOf(files.item(i).name) >= 0) {
+        alert('すでに登録済みの名前のファイルが選択されています。処理を中止します。');
+        return;
+      }
+    }
+
     for (let i = 0; i < files.length; i++) {
       this.uploadFiles.push(files.item(i));
       this.readQueue.enqueue(async () => {
@@ -181,6 +189,7 @@ export class AlbumComponent implements OnInit {
   // ファイルリストの更新
   async updateFileList() {
 
+    this.fileList = this.fileList.filter((x, i, self) => self.indexOf(x) === i); // 重複を排除
     const json = JSON.stringify(this.fileList);
     const iv = window.crypto.getRandomValues(new Uint8Array(12));
 
