@@ -295,6 +295,7 @@ export class AlbumComponent implements OnInit {
 
   async delete(image: DecryptedImage) {
     const b = confirm('本当に削除してよろしいですか？');
+    if (!b) { return; }
     const ref = this.storage.ref(this.id + '/' + image.name);
     await ref.delete();
 
