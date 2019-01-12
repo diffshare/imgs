@@ -212,6 +212,7 @@ export class AlbumComponent implements OnInit {
     const dataURL = URL.createObjectURL(blob);
 
     const decryptedImage = new DecryptedImage();
+    decryptedImage.name = name;
     const tags = EXIF.readFromBinaryFile(dec);
     decryptedImage.tags = tags;
     if (tags && tags['Orientation'] && tags['Orientation'] !== 1) {
@@ -291,6 +292,17 @@ export class AlbumComponent implements OnInit {
     });
     return URL.createObjectURL(blob);
   }
+
+  async delete(image: DecryptedImage) {
+    const b = confirm('本当に削除してよろしいですか？');
+    const ref = this.storage.ref(this.id + '/' + image.name);
+    await ref.delete();
+
+    this.fileList.splice(this.fileList.indexOf(image.name), 1);
+    await this.updateFileList();
+
+    this.imageList.splice(this.imageList.indexOf(image), 1);
+  }
 }
 
 class UploadingFile {
@@ -303,6 +315,7 @@ class UploadingFile {
 class DecryptedImage {
   url: SafeUrl;
   tags: any;
+  name: string;
 
   get orientation(): number {
     if (this.tags == null) {
