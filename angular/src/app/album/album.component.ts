@@ -78,6 +78,20 @@ export class AlbumComponent implements OnInit {
     });
   }
 
+  dndFiles(event: DragEvent) {
+    try {
+      event.stopPropagation();
+      event.preventDefault();
+      if (event.type === 'dragover') {
+        event.dataTransfer.dropEffect = 'copy';
+      } else if (event.type === 'drop') {
+        this.append(event.dataTransfer.files);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
   async loadFileList() {
     if (this.loading) {
       return;
