@@ -224,6 +224,7 @@ export class AlbumComponent implements OnInit {
 
     const decryptedImage = new DecryptedImage();
     decryptedImage.name = name;
+    decryptedImage.decryptedData = dec;
     decryptedImage.originalImageUrl = this.sanitizer.bypassSecurityTrustUrl(dataURL);
     const tags = EXIF.readFromBinaryFile(dec);
     decryptedImage.tags = tags;
@@ -308,9 +309,7 @@ export class AlbumComponent implements OnInit {
   async downloadAsZip() {
     const zip = new JSZip();
     for (const image of this.imageList) {
-      const url = this.sanitizer.sanitize(SecurityContext.URL, image.originalImageUrl);
-      const imageData = await this.http.get(url, {responseType: 'blob'}).toPromise();
-      zip.file(image.name, imageData, {binary: true});
+      zip.file(image.name, image.decryptedData, {binary: true});
     }
     const zipFile = await zip.generateAsync({type: 'blob'});
     FileSaver.saveAs(zipFile, `Photos-${this.id}.zip`);
@@ -337,6 +336,7 @@ class UploadingFile {
 }
 
 class DecryptedImage {
+  decryptedData: ArrayBuffer;
   url: SafeUrl;
   originalImageUrl: SafeUrl;
   tags: any;
