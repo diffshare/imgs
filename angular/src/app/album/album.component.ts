@@ -222,6 +222,7 @@ export class AlbumComponent implements OnInit {
 
     const decryptedImage = new DecryptedImage();
     decryptedImage.name = name;
+    decryptedImage.originalImageUrl = this.sanitizer.bypassSecurityTrustUrl(dataURL);
     const tags = EXIF.readFromBinaryFile(dec);
     decryptedImage.tags = tags;
     if (tags && tags['Orientation'] && tags['Orientation'] !== 1) {
@@ -324,6 +325,7 @@ class UploadingFile {
 
 class DecryptedImage {
   url: SafeUrl;
+  originalImageUrl: SafeUrl;
   tags: any;
   name: string;
 

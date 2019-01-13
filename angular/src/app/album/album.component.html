@@ -25,7 +25,7 @@
 <div *ngFor="let image of imageList">
   <img [src]="image?.url" *ngIf="image?.url" />
   <div>
-    {{image?.name}}
+    <a [href]="image?.originalImageUrl" download="{{image?.name}}">{{image?.name}}</a>
     <button (click)="delete(image)">削除</button>
   </div>
   <div *ngIf="image?.tags">
