@@ -165,8 +165,20 @@ export class AlbumComponent implements OnInit {
       await ref.put(file.encryptedBuffer);
       this.fileList.push(file.name);
       await this.updateFileList();
-
       this.completedCount += 1;
+
+      const decryptedImage = file.toDecryptedImage(this.sanitizer);
+      const tags = decryptedImage.tags;
+      if (tags && tags['Orientation'] && tags['Orientation'] !== 1) {
+        const rotated = await this.rotate(decryptedImage.originalImageUrl, tags);
+        decryptedImage.url = this.sanitizer.bypassSecurityTrustUrl(rotated);
+      } else {
+        // canvas.toBlob() (this.rotate())は重い処理なので不要な場合（Orientation=1）は行わない
+      }
+
+      const index = this.fileList.indexOf(decryptedImage.name);
+      this.imageList[index] = decryptedImage;
+      this.loadCompletedCount += 1;
     });
   }
 
@@ -328,6 +340,10 @@ class UploadingFile {
 
   constructor(public readonly name: string, public readonly buffer: ArrayBuffer) {
 
+  }
+
+  toDecryptedImage(sanitizer: DomSanitizer): DecryptedImage {
+    return new DecryptedImage(this.name, this.buffer, sanitizer);
   }
 }
 
