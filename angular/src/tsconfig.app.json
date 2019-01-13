@@ -2,6 +2,11 @@
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "outDir": "../out-tsc/app",
+    "paths": {
+      "jszip": [
+        "node_modules/jszip/dist/jszip.js"
+      ]
+    },
     "types": []
   },
   "exclude": [

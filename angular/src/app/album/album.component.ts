@@ -1,4 +1,4 @@
-import {Component, OnInit} from '@angular/core';
+import {Component, OnInit, SecurityContext} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {AngularFireStorage} from '@angular/fire/storage';
 import {HttpClient} from '@angular/common/http';
@@ -7,6 +7,8 @@ import * as EXIF from 'exif-js';
 import {combineLatest} from 'rxjs';
 import {JobQueue} from '../job/job-queue';
 import {TitleService} from '../service/title.service';
+import * as JSZip from 'jszip';
+import * as FileSaver from 'file-saver';
 
 @Component({
   selector: 'app-album',
@@ -246,6 +248,8 @@ export class AlbumComponent implements OnInit {
 
     const decryptedImage = new DecryptedImage();
     decryptedImage.name = name;
+    decryptedImage.decryptedData = dec;
+    decryptedImage.originalImageUrl = this.sanitizer.bypassSecurityTrustUrl(dataURL);
     const tags = EXIF.readFromBinaryFile(dec);
     decryptedImage.tags = tags;
     if (tags && tags['Orientation'] && tags['Orientation'] !== 1) {
@@ -326,6 +330,15 @@ export class AlbumComponent implements OnInit {
     return URL.createObjectURL(blob);
   }
 
+  async downloadAsZip() {
+    const zip = new JSZip();
+    for (const image of this.imageList) {
+      zip.file(image.name, image.decryptedData, {binary: true});
+    }
+    const zipFile = await zip.generateAsync({type: 'blob'});
+    FileSaver.saveAs(zipFile, `Photos-${this.id}.zip`);
+  }
+
   async delete(image: DecryptedImage) {
     const b = confirm('本当に削除してよろしいですか？');
     if (!b) { return; }
@@ -347,7 +360,9 @@ class UploadingFile {
 }
 
 class DecryptedImage {
+  decryptedData: ArrayBuffer;
   url: SafeUrl;
+  originalImageUrl: SafeUrl;
   tags: any;
   name: string;
 
