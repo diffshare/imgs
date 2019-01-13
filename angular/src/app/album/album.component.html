@@ -22,7 +22,7 @@
   <li>画像のファイル名は公開情報になるので、秘匿すべき情報はファイル名に含まないこと。</li>
 </ol>
 
-<div *ngIf="(fileList.length > 0) && (fileList.length == imageList.length)">
+<div *ngIf="(fileList.length > 0) && (fileList.length === imageList.length)">
   <button (click)="downloadAsZip()">すべて保存</button>
 </div>
 
