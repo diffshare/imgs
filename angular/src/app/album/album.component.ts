@@ -78,6 +78,30 @@ export class AlbumComponent implements OnInit {
     });
   }
 
+  dndFiles(event: DragEvent) {
+    try {
+      const fileItems = [];
+      for (let i = 0; i < event.dataTransfer.items.length; i++) {
+        if (event.dataTransfer.items[i].kind === 'file') {
+          fileItems.push(event.dataTransfer.items[i]);
+        }
+      }
+      if (fileItems.length === 0) {
+        return; // ファイルをドラッグアンドドロップしていないのならば処理しない
+      }
+
+      event.stopPropagation();
+      event.preventDefault();
+      if (event.type === 'dragover') {
+        event.dataTransfer.dropEffect = 'copy';
+      } else if (event.type === 'drop') {
+        this.append(fileItems.map(item => item.getAsFile()));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
   async loadFileList() {
     if (this.loading) {
       return;
@@ -117,19 +141,19 @@ export class AlbumComponent implements OnInit {
     this.loading = false;
   }
 
-  append(files: FileList) {
+  append(files: FileList | File[]) {
     // 重複チェック
     for (let i = 0; i < files.length; i++) {
-      if (this.fileList.indexOf(files.item(i).name) >= 0) {
+      if (this.fileList.indexOf(files[i].name) >= 0) {
         alert('すでに登録済みの名前のファイルが選択されています。処理を中止します。');
         return;
       }
     }
 
     for (let i = 0; i < files.length; i++) {
-      this.uploadFiles.push(files.item(i));
+      this.uploadFiles.push(files[i]);
       this.readQueue.enqueue(async () => {
-        const file = files.item(i);
+        const file = files[i];
         const buffer = await new Promise<ArrayBuffer>(resolve => {
           const reader = new FileReader();
           reader.onloadend = () => resolve(reader.result as ArrayBuffer);
