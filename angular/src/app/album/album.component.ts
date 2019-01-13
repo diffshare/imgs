@@ -154,7 +154,7 @@ export class AlbumComponent implements OnInit {
         iv: iv,
       }, key, file.buffer);
 
-      file.buffer = AlbumComponent.concat(iv.buffer as ArrayBuffer, encrypted);
+      file.encryptedBuffer = AlbumComponent.concat(iv.buffer as ArrayBuffer, encrypted);
       this.enqueueUpload(file);
     });
   }
@@ -162,7 +162,7 @@ export class AlbumComponent implements OnInit {
   enqueueUpload(file: UploadingFile) {
     this.uploadQueue.enqueue(async () => {
       const ref = this.storage.ref(this.id + '/' + file.name);
-      await ref.put(file.buffer);
+      await ref.put(file.encryptedBuffer);
       this.fileList.push(file.name);
       await this.updateFileList();
 
@@ -219,27 +219,22 @@ export class AlbumComponent implements OnInit {
       name: 'AES-GCM',
       iv: iv,
     }, key, data);
-    const blob = new Blob([dec], {type: 'image/jpeg'});
-    const dataURL = URL.createObjectURL(blob);
 
-    const decryptedImage = new DecryptedImage();
-    decryptedImage.name = name;
-    decryptedImage.decryptedData = dec;
-    decryptedImage.originalImageUrl = this.sanitizer.bypassSecurityTrustUrl(dataURL);
-    const tags = EXIF.readFromBinaryFile(dec);
-    decryptedImage.tags = tags;
+    const decryptedImage = new DecryptedImage(name, dec, this.sanitizer);
+
+    const tags = decryptedImage.tags;
     if (tags && tags['Orientation'] && tags['Orientation'] !== 1) {
-      const rotated = await this.rotate(dataURL, tags);
+      const rotated = await this.rotate(decryptedImage.originalImageUrl, tags);
       decryptedImage.url = this.sanitizer.bypassSecurityTrustUrl(rotated);
     } else {
-      decryptedImage.url = this.sanitizer.bypassSecurityTrustUrl(dataURL);
+      // canvas.toBlob() (this.rotate())は重い処理なので不要な場合（Orientation=1）は行わない
     }
 
     return decryptedImage;
   }
 
   // see: https://stackoverflow.com/questions/20600800/js-client-side-exif-orientation-rotate-and-mirror-jpeg-images/31273162#31273162
-  async rotate(url: string, tags: any) {
+  async rotate(url: SafeUrl, tags: any) {
     const canvas = document.createElement('canvas');
 
     const ctx = canvas.getContext('2d');
@@ -251,7 +246,7 @@ export class AlbumComponent implements OnInit {
       const image = new Image();
       image.onload = () => resolve(image);
       image.onerror = (err) => reject(err);
-      image.src = url;
+      image.src = this.sanitizer.sanitize(SecurityContext.URL, url);
     });
 
     img.width = width;
@@ -329,18 +324,33 @@ export class AlbumComponent implements OnInit {
 }
 
 class UploadingFile {
+  encryptedBuffer: ArrayBuffer;
 
-  constructor(public name: string, public buffer: ArrayBuffer) {
+  constructor(public readonly name: string, public readonly buffer: ArrayBuffer) {
 
   }
 }
 
 class DecryptedImage {
-  decryptedData: ArrayBuffer;
+  readonly decryptedData: ArrayBuffer;
   url: SafeUrl;
-  originalImageUrl: SafeUrl;
-  tags: any;
-  name: string;
+  readonly originalImageUrl: SafeUrl;
+  readonly tags: any;
+
+  constructor(
+    public readonly name: string,
+    public readonly dec: ArrayBuffer,
+    private sanitizer: DomSanitizer
+  ) {
+    const blob = new Blob([dec], {type: 'image/jpeg'});
+    const dataURL = URL.createObjectURL(blob);
+
+    this.name = name;
+    this.decryptedData = dec;
+    this.originalImageUrl = sanitizer.bypassSecurityTrustUrl(dataURL);
+    this.url = this.originalImageUrl;
+    this.tags = EXIF.readFromBinaryFile(dec);
+  }
 
   get orientation(): number {
     if (this.tags == null) {
