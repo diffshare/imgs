@@ -1,5 +1,5 @@
-import {Component, OnInit, SecurityContext} from '@angular/core';
-import {ActivatedRoute} from '@angular/router';
+import {Component, OnInit} from '@angular/core';
+import {ActivatedRoute, Router} from '@angular/router';
 import {AngularFireStorage} from '@angular/fire/storage';
 import {HttpClient} from '@angular/common/http';
 import {DomSanitizer, SafeUrl} from '@angular/platform-browser';
@@ -22,7 +22,13 @@ export class AlbumComponent implements OnInit {
     return !this.loading && (!this.hasFileList || (this.hasFileList && this.validFileList));
   }
 
+  get editable(): boolean {
+    // エディット機能が有効もしくは画像の投稿がないとき
+    return this.showEdit || this.fileList.length === 0;
+  }
+
   constructor(
+    private router: Router,
     private route: ActivatedRoute,
     private storage: AngularFireStorage,
     private http: HttpClient,
@@ -49,6 +55,8 @@ export class AlbumComponent implements OnInit {
 
   private id: string;
   imageList: DecryptedImage[] = [];
+  showPhotoDetail = false;
+  showEdit = false;
 
   static stringToBuffer(src): ArrayBufferLike {
     return (new Uint16Array([].map.call(src, function (c) {
@@ -73,7 +81,7 @@ export class AlbumComponent implements OnInit {
       this.route.params
     ).subscribe(value => {
       this.key = value[0].substring(2);
-      this.id = value[1].id;
+      this.id = value[1].album_id;
       this.title.setTitle(this.id);
       this.keyPromise = this.importKey();
       return this.loadFileList();
@@ -350,6 +358,10 @@ export class AlbumComponent implements OnInit {
 
     this.imageList.splice(this.imageList.indexOf(image), 1);
   }
+
+  gotoPhoto(image: DecryptedImage) {
+    this.router.navigate([this.id, image.name], {fragment: 'k=' + this.key});
+  }
 }
 
 class UploadingFile {
@@ -365,6 +377,7 @@ class DecryptedImage {
   originalImageUrl: SafeUrl;
   tags: any;
   name: string;
+  showFullExif = false;
 
   get orientation(): number {
     if (this.tags == null) {
