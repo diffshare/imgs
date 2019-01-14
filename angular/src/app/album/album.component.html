@@ -1,6 +1,6 @@
-{{currentImageName}}
 <app-photo [image]="currentImage" [album_id]="album_id"></app-photo>
 
+<div *ngIf="!hasChild">
 <label>
   <input type="checkbox" [(ngModel)]="showEdit" />
   編集
@@ -63,4 +63,5 @@
       {{image?.tags | json}}
     </div>
   </div>
+</div>
 </div>
