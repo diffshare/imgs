@@ -1,9 +1,9 @@
-import {Component, OnInit, SecurityContext} from '@angular/core';
+import {Component, HostListener, OnInit, SecurityContext} from '@angular/core';
 import {ActivatedRoute, NavigationEnd, Router} from '@angular/router';
 import {AngularFireStorage} from '@angular/fire/storage';
 import {HttpClient} from '@angular/common/http';
 import {DomSanitizer, SafeUrl} from '@angular/platform-browser';
-import {combineLatest, Observable, Subject} from 'rxjs';
+import {combineLatest, Subject} from 'rxjs';
 import {JobQueue} from '../job/job-queue';
 import {TitleService} from '../service/title.service';
 import * as JSZip from 'jszip';
@@ -104,6 +104,19 @@ export class AlbumComponent implements OnInit {
       this.keyPromise = this.importKey();
       return this.loadFileList();
     });
+  }
+
+  @HostListener('window:keydown', ['$event'])
+  onKeydown($event) {
+    if (this.currentImageName != null) {
+      const index = this.fileList.indexOf(this.currentImageName);
+      if ($event.key === 'ArrowRight') {
+        this.currentImageName = this.fileList[Math.min(this.fileList.length - 1, index + 1)];
+      }
+      if ($event.key === 'ArrowLeft') {
+        this.currentImageName = this.fileList[Math.max(0, index - 1)];
+      }
+    }
   }
 
   dndFiles(event: DragEvent) {
