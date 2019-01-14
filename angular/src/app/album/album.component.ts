@@ -46,12 +46,10 @@ export class AlbumComponent implements OnInit {
 
       if (this.route.firstChild == null) {
         this.currentImageName = null;
-        this.hasChild = false;
         return;
       }
       const photoParams = await this.route.firstChild.snapshot.params;
       this.currentImageName = photoParams.photo_id;
-      this.hasChild = true;
     });
   }
 
@@ -71,7 +69,6 @@ export class AlbumComponent implements OnInit {
 
   keyPromise: PromiseLike<CryptoKey>;
 
-  hasChild = false;
   album_id: string;
   imageList: DecryptedImage[] = [];
   showPhotoDetail = false;
