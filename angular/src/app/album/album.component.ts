@@ -69,7 +69,7 @@ export class AlbumComponent implements OnInit {
 
   keyPromise: PromiseLike<CryptoKey>;
 
-  private id: string;
+  album_id: string;
   imageList: DecryptedImage[] = [];
   showPhotoDetail = false;
   showEdit = false;
@@ -99,8 +99,8 @@ export class AlbumComponent implements OnInit {
       this.route.params
     ).subscribe(value => {
       this.key = value[0].substring(2);
-      this.id = value[1].album_id;
-      this.title.setTitle(this.id);
+      this.album_id = value[1].album_id;
+      this.title.setTitle(this.album_id);
       this.keyPromise = this.importKey();
       return this.loadFileList();
     });
@@ -134,12 +134,12 @@ export class AlbumComponent implements OnInit {
     if (this.loading) {
       return;
     }
-    if (!this.key || !this.id) {
+    if (!this.key || !this.album_id) {
       return;
     } // idと鍵の双方が存在しないと
     try {
       this.loading = true;
-      const ref = this.storage.ref(this.id + '/filelist');
+      const ref = this.storage.ref(this.album_id + '/filelist');
       this.hasFileList = false;
       const url = await ref.getDownloadURL().toPromise();
       this.hasFileList = true;
@@ -211,7 +211,7 @@ export class AlbumComponent implements OnInit {
 
   enqueueUpload(file: UploadingFile) {
     this.uploadQueue.enqueue(async () => {
-      const ref = this.storage.ref(this.id + '/' + file.name);
+      const ref = this.storage.ref(this.album_id + '/' + file.name);
       await ref.put(file.encryptedBuffer);
       this.fileList.push(file.name);
       await this.updateFileList();
@@ -263,7 +263,7 @@ export class AlbumComponent implements OnInit {
       iv: iv,
     }, key, AlbumComponent.stringToBuffer(json) as ArrayBuffer);
 
-    const ref = this.storage.ref(this.id + '/filelist');
+    const ref = this.storage.ref(this.album_id + '/filelist');
     ref.put(AlbumComponent.concat(iv.buffer as ArrayBuffer, decrypted));
   }
 
@@ -271,7 +271,7 @@ export class AlbumComponent implements OnInit {
     if (name == null) {
       return;
     }
-    const ref = this.storage.ref(this.id + '/' + name);
+    const ref = this.storage.ref(this.album_id + '/' + name);
     const url = await ref.getDownloadURL().toPromise();
     const buffer = await this.http.get(url, {responseType: 'arraybuffer'}).toPromise();
     const key = await this.keyPromise;
@@ -369,13 +369,13 @@ export class AlbumComponent implements OnInit {
       zip.file(image.name, image.decryptedData, {binary: true});
     }
     const zipFile = await zip.generateAsync({type: 'blob'});
-    FileSaver.saveAs(zipFile, `Photos-${this.id}.zip`);
+    FileSaver.saveAs(zipFile, `Photos-${this.album_id}.zip`);
   }
 
   async delete(image: DecryptedImage) {
     const b = confirm('本当に削除してよろしいですか？');
     if (!b) { return; }
-    const ref = this.storage.ref(this.id + '/' + image.name);
+    const ref = this.storage.ref(this.album_id + '/' + image.name);
     await ref.delete();
 
     this.fileList.splice(this.fileList.indexOf(image.name), 1);
@@ -385,7 +385,7 @@ export class AlbumComponent implements OnInit {
   }
 
   gotoPhoto(image: DecryptedImage) {
-    this.router.navigate([this.id, image.name], {fragment: 'k=' + this.key});
+    this.router.navigate([this.album_id, image.name], {fragment: 'k=' + this.key});
   }
 }
 
