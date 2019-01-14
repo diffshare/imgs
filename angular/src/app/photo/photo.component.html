@@ -1,0 +1,5 @@
+<div class="photo" *ngIf="image">
+  <a [routerLink]="['/', album_id]" [preserveFragment]="true">
+    <img [src]="image?.url"/>
+  </a>
+</div>

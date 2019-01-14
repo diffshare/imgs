@@ -1,14 +1,14 @@
 import {Component, OnInit, SecurityContext} from '@angular/core';
-import {ActivatedRoute, Router} from '@angular/router';
+import {ActivatedRoute, NavigationEnd, Router} from '@angular/router';
 import {AngularFireStorage} from '@angular/fire/storage';
 import {HttpClient} from '@angular/common/http';
 import {DomSanitizer, SafeUrl} from '@angular/platform-browser';
-import * as EXIF from 'exif-js';
-import {combineLatest} from 'rxjs';
+import {combineLatest, Observable, Subject} from 'rxjs';
 import {JobQueue} from '../job/job-queue';
 import {TitleService} from '../service/title.service';
 import * as JSZip from 'jszip';
 import * as FileSaver from 'file-saver';
+import {DecryptedImage} from '../model/decrypted-image';
 
 @Component({
   selector: 'app-album',
@@ -27,6 +27,10 @@ export class AlbumComponent implements OnInit {
     return this.showEdit || this.fileList.length === 0;
   }
 
+  get currentImage(): DecryptedImage {
+    return this.imageList[this.fileList.indexOf(this.currentImageName)];
+  }
+
   constructor(
     private router: Router,
     private route: ActivatedRoute,
@@ -35,6 +39,18 @@ export class AlbumComponent implements OnInit {
     private sanitizer: DomSanitizer,
     private title: TitleService
   ) {
+    this.router.events.subscribe(async value => {
+      if (!(value instanceof NavigationEnd)) {
+        return;
+      }
+
+      if (this.route.firstChild == null) {
+        this.currentImageName = null;
+        return;
+      }
+      const photoParams = await this.route.firstChild.snapshot.params;
+      this.currentImageName = photoParams.photo_id;
+    });
   }
 
   readQueue: JobQueue = new JobQueue('read');
@@ -57,6 +73,8 @@ export class AlbumComponent implements OnInit {
   imageList: DecryptedImage[] = [];
   showPhotoDetail = false;
   showEdit = false;
+
+  currentImageName: string;
 
   static stringToBuffer(src): ArrayBufferLike {
     return (new Uint16Array([].map.call(src, function (c) {
@@ -383,46 +401,3 @@ class UploadingFile {
   }
 }
 
-class DecryptedImage {
-  readonly decryptedData: ArrayBuffer;
-  url: SafeUrl;
-  readonly originalImageUrl: SafeUrl;
-  readonly tags: any;
-  showFullExif = false;
-
-  constructor(
-    public readonly name: string,
-    public readonly dec: ArrayBuffer,
-    private sanitizer: DomSanitizer
-  ) {
-    const blob = new Blob([dec], {type: 'image/jpeg'});
-    const dataURL = URL.createObjectURL(blob);
-
-    this.name = name;
-    this.decryptedData = dec;
-    this.originalImageUrl = sanitizer.bypassSecurityTrustUrl(dataURL);
-    this.url = this.originalImageUrl;
-    this.tags = EXIF.readFromBinaryFile(dec);
-  }
-
-  get orientation(): number {
-    if (this.tags == null) {
-      return null;
-    }
-
-    return this.tags['Orientation'];
-  }
-
-  get exposureTime(): string {
-    if (this.tags == null) {
-      return null;
-    }
-
-    // 1秒以上のときはそのまま
-    if (this.tags['ExposureTime'] >= 1) {
-      return this.tags['ExposureTime'];
-    }
-
-    return '1/' + (1 / this.tags['ExposureTime']);
-  }
-}

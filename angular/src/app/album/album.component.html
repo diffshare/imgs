@@ -1,4 +1,5 @@
-<app-photo></app-photo>
+{{currentImageName}}
+<app-photo [image]="currentImage" [album_id]="id"></app-photo>
 
 <label>
   <input type="checkbox" [(ngModel)]="showEdit" />
