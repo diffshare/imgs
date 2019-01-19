@@ -2,7 +2,7 @@
   アルバム名: {{album.album_id}}
 </div>
 <div>
-  読み込み枚数: {{(photos | async)?.length || 0}}/{{meta?.items.length}}
+  読み込み枚数: {{(photos | async)?.length || 0}}/{{(meta|async)?.items.length}}
 </div>
 <div>
   経過時間: {{elapsed}}ms

@@ -11,7 +11,7 @@ import {DomSanitizer} from '@angular/platform-browser';
 })
 export class Album2Component implements OnInit {
   album: Album;
-  meta: AlbumMeta;
+  meta: Observable<AlbumMeta>;
   photos: Observable<Photo[]>;
   elapsed: number;
 
@@ -40,7 +40,7 @@ export class Album2Component implements OnInit {
 
   async load() {
     const firstTime = new Date();
-    this.meta = await this.album.getMeta();
+    this.meta = this.album.getMeta();
     this.photos = this.album.all();
     await this.photos.subscribe(value => {
         this.elapsed = new Date().getTime() - firstTime.getTime();

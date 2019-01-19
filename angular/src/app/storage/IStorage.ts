@@ -1,3 +1,5 @@
+import {Observable} from 'rxjs';
+
 export interface IStorage {
-  get(path: string): Promise<ArrayBuffer>;
+  get(path: string): Observable<ArrayBuffer>;
 }

@@ -3,6 +3,8 @@ import {IStorage} from './IStorage';
 import {HttpClient} from '@angular/common/http';
 import {AngularFireStorage} from '@angular/fire/storage';
 import {Observable} from 'rxjs';
+import {Utils} from '../utils/utils';
+import {map, mergeMap} from 'rxjs/operators';
 
 export class Photo {
 
@@ -40,7 +42,7 @@ enum LayoutType {
 
 export class AlbumMeta {
   items: IMeta[] = [];
-  orderBy: OrderType = OrderType.Default;
+  order: OrderType = OrderType.Default;
   layout: LayoutType = LayoutType.Default;
 }
 
@@ -63,7 +65,7 @@ export class Album {
     public readonly album_id: string,
     private keyString: string,
     private storage: IStorage) {
-    this.key = Album.importKey(keyString);
+    this.key = Utils.importKey(keyString);
   }
 
   get encrypted(): boolean {
@@ -75,67 +77,33 @@ export class Album {
   photos: Photo[];
   loading: boolean;
 
-  static bufferToString(buf) {
-    return String.fromCharCode.apply('', new Uint16Array(buf));
-  }
-
-  private static async importKey(keyString: string) {
-    return await window.crypto.subtle.importKey(
-      'jwk',
-      {
-        kty: 'oct',
-        k: keyString,
-        alg: 'A256GCM',
-        ext: true,
-      },
-      {
-        name: 'AES-GCM',
-        length: 256
-      },
-      false, // whether the key is extractable (i.e. can be used in exportKey)
-      ['encrypt', 'decrypt'] // can "encrypt", "decrypt", "wrapKey", or "unwrapKey"
-    );
-  }
-
-  private static async decrypt(response: ArrayBuffer, key: CryptoKey) {
-    const iv = response.slice(0, 12);
-    const data = response.slice(12);
-    return await window.crypto.subtle.decrypt({
-      name: 'AES-GCM',
-      iv: iv
-    }, key, data);
-  }
-
-  async getMeta(): Promise<AlbumMeta> {
-    let response = await this.storage.get(`${this.album_id}/filelist`);
-    if (this.encrypted) {
-      response = await Album.decrypt(response, await this.key);
-    }
-    const json = Album.bufferToString(response);
-    const obj: Array<string> = JSON.parse(json);
-    return new LegacyAlbumMeta(obj);
+  getMeta(): Observable<AlbumMeta> {
+    return this.storage.get(`${this.album_id}/filelist`).pipe(mergeMap(async response => {
+      if (this.encrypted) {
+        response = await Utils.decrypt(response, await this.key);
+      }
+      const json = Utils.bufferToString(response);
+      const obj: Array<string> = JSON.parse(json);
+      return new LegacyAlbumMeta(obj);
+    }));
   }
 
   putMeta(meta: AlbumMeta) {
   }
 
   all(): Observable<Photo[]> {
-
     return Observable.create(async observer => {
+      const meta = await this.getMeta().toPromise();
       const result: Photo[] = [];
-      const meta = await this.getMeta();
       meta.items.forEach(async (item, index) => {
         if (item instanceof PhotoMeta) {
-          let data = await this.storage.get(`${this.album_id}/${item.canonicalName}`);
+          let data = await this.storage.get(`${this.album_id}/${item.canonicalName}`).toPromise();
           if (this.encrypted) {
-            data = await Album.decrypt(data, await this.key);
+            data = await Utils.decrypt(data, await this.key);
           }
           const photo = new Photo(item, data);
           result[index] = photo;
           observer.next(result);
-          if (observer.completedCount === meta.items.length) {
-            observer.complete();
-          }
         }
       });
     });
@@ -167,9 +135,8 @@ export class CloudStorageService implements IStorage {
     return new Album(album_id, keyString, this);
   }
 
-  async get(path: string): Promise<ArrayBuffer> {
+  get(path: string): Observable<ArrayBuffer> {
     const ref = this.storage.ref(path);
-    const url = await ref.getDownloadURL().toPromise();
-    return await this.http.get(url, {responseType: 'arraybuffer'}).toPromise();
+    return ref.getDownloadURL().pipe(mergeMap(url => this.http.get(url, {responseType: 'arraybuffer'})));
   }
 }
