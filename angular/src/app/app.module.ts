@@ -11,13 +11,15 @@ import { AlbumComponent } from './album/album.component';
 import {FormsModule} from '@angular/forms';
 import {HttpClientModule} from '@angular/common/http';
 import { PhotoComponent } from './photo/photo.component';
+import { Album2Component } from './album2/album2.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     HomeComponent,
     AlbumComponent,
-    PhotoComponent
+    PhotoComponent,
+    Album2Component
   ],
   imports: [
     BrowserModule,
