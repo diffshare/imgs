@@ -297,12 +297,19 @@ export class AlbumComponent implements OnInit {
 
     const decryptedImage = new DecryptedImage(name, dec, this.sanitizer);
 
-    const tags = decryptedImage.tags;
-    if (tags && tags['Orientation'] && tags['Orientation'] !== 1) {
-      const rotated = await this.rotate(decryptedImage.originalImageUrl, tags);
-      decryptedImage.url = this.sanitizer.bypassSecurityTrustUrl(rotated);
+    if (CSS.supports('image-orientation: from-image')) {
+      // image-orientation: from-image に対応しているならば、CSS に任せると早くなる
+      // しかし廃止の見込み、UA が EXIF を読むのが正しくなる
+      // https://drafts.csswg.org/css-images-3/#the-image-orientation
+      // https://drafts.csswg.org/css-images-4/#image-notation
     } else {
-      // canvas.toBlob() (this.rotate())は重い処理なので不要な場合（Orientation=1）は行わない
+      const tags = decryptedImage.tags;
+      if (tags && tags['Orientation'] && tags['Orientation'] !== 1) {
+        const rotated = await this.rotate(decryptedImage.originalImageUrl, tags);
+        decryptedImage.url = this.sanitizer.bypassSecurityTrustUrl(rotated);
+      } else {
+        // canvas.toBlob() (this.rotate())は重い処理なので不要な場合（Orientation=1）は行わない
+      }
     }
 
     return decryptedImage;
