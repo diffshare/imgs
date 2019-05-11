@@ -40,27 +40,29 @@
   <button (click)="downloadAsZip()">すべて保存</button>
 </div>
 
-<div *ngFor="let image of imageList">
-  <img [src]="image?.url" *ngIf="image?.url" (click)="gotoPhoto(image)" />
-  <div>
-    <a [href]="image?.originalImageUrl" download="{{image?.name}}">{{image?.name}}</a>
-    <button (click)="delete(image)" *ngIf="editable">削除</button>
-  </div>
-  <div *ngIf="image?.tags && showPhotoDetail">
-    Model: {{image?.tags['Model']}},
-    SS: {{image?.exposureTime}},
-    F: {{image?.tags['FNumber']}},
-    ISO: {{image?.tags['ISOSpeedRatings']}},
-    焦点距離: {{image?.tags['FocalLength']}}mm,
-    <span *ngIf="image?.tags['FocalLengthIn35mmFilm']">
-    焦点距離（35mm換算）: {{image?.tags['FocalLengthIn35mmFilm']}}mm
-    </span>
-    <label>
-      <input type="checkbox" [(ngModel)]="image.showFullExif" />
-      EXIF
-    </label>
-    <div *ngIf="image?.showFullExif">
-      {{image?.tags | json}}
+<div class="photo-list">
+  <div *ngFor="let image of imageList">
+    <img [src]="image?.url" *ngIf="image?.url" (click)="gotoPhoto(image)" />
+    <div>
+      <a [href]="image?.originalImageUrl" download="{{image?.name}}">{{image?.name}}</a>
+      <button (click)="delete(image)" *ngIf="editable">削除</button>
+    </div>
+    <div *ngIf="image?.tags && showPhotoDetail">
+      Model: {{image?.tags['Model']}},
+      SS: {{image?.exposureTime}},
+      F: {{image?.tags['FNumber']}},
+      ISO: {{image?.tags['ISOSpeedRatings']}},
+      焦点距離: {{image?.tags['FocalLength']}}mm,
+      <span *ngIf="image?.tags['FocalLengthIn35mmFilm']">
+      焦点距離（35mm換算）: {{image?.tags['FocalLengthIn35mmFilm']}}mm
+      </span>
+      <label>
+        <input type="checkbox" [(ngModel)]="image.showFullExif" />
+        EXIF
+      </label>
+      <div *ngIf="image?.showFullExif">
+        {{image?.tags | json}}
+      </div>
     </div>
   </div>
 </div>
