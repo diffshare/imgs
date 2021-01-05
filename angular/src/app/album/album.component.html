@@ -6,6 +6,10 @@
   編集
 </label>
 <label>
+  <input type="checkbox" [(ngModel)]="showPhotoDateTime"/>
+  撮影日時
+</label>
+<label>
   <input type="checkbox" [(ngModel)]="showPhotoDetail"/>
   写真詳細
 </label>
@@ -46,6 +50,9 @@
     <div>
       <a [href]="image?.originalImageUrl" download="{{image?.name}}">{{image?.name}}</a>
       <button (click)="delete(image)" *ngIf="editable">削除</button>
+    </div>
+    <div *ngIf="(image?.tags['DateTimeOriginal'] || image?.tags['DateTime']) && showPhotoDateTime">
+      撮影日時: {{image?.tags['DateTimeOriginal'] || image?.tags['DateTime']}}
     </div>
     <div *ngIf="image?.tags && showPhotoDetail">
       Model: {{image?.tags['Model']}},

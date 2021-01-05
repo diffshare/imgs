@@ -71,6 +71,7 @@ export class AlbumComponent implements OnInit {
 
   album_id: string;
   imageList: DecryptedImage[] = [];
+  showPhotoDateTime = false;
   showPhotoDetail = false;
   showEdit = false;
 
