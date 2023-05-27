@@ -117,7 +117,8 @@ export default function Album({ params }: { params: { slug: string[] } }) {
               )}
               {showFullExif && (
                 <div>
-                  {JSON.stringify(image?.tags)}
+                  {/* {JSON.stringify(image?.tags)} */}
+                  {JSON.stringify(image.exifr)}
                 </div>
               )}
             </div>

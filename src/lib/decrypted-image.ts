@@ -1,10 +1,12 @@
 import * as EXIF from 'exif-js/exif';
+import * as exifr from 'exifr';
 
 export class DecryptedImage {
   readonly decryptedData: ArrayBuffer;
   url: string;
   readonly originalImageUrl: string;
   readonly tags: any;
+  exifr: any;
   showFullExif = false;
 
   constructor(
@@ -19,6 +21,7 @@ export class DecryptedImage {
     this.originalImageUrl = dataURL;
     this.url = this.originalImageUrl;
     this.tags = EXIF.readFromBinaryFile(dec);
+    exifr.parse(dec).then(data => this.exifr = data);
   }
 
   get orientation(): number | null {
