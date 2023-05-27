@@ -213,7 +213,7 @@ async function loadImage(album_id:string, name: string, key: CryptoKey) {
     const type = 'image/jpeg';
     const blob = await new Promise<Blob>(resolve => {
       if (canvas.toBlob) {
-        canvas.toBlob(result => resolve(result), type);
+        canvas.toBlob(result => resolve(result!), type);
       } else {
         const dataURL = canvas.toDataURL(type);
         const bin = atob(dataURL.split(',')[1]);
