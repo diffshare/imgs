@@ -17,6 +17,7 @@
     "exif-js": "^2.3.0",
     "exifr": "^7.1.3",
     "firebase": "^9.22.1",
+    "magic-bytes.js": "^1.0.14",
     "next": "13.2.4",
     "react": "18.2.0",
     "react-dom": "18.2.0",

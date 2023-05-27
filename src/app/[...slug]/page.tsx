@@ -1,21 +1,26 @@
 "use client"
 
-import { useEffect, useState } from "react";
-import { importKey, loadFileList, loadImage, storage } from "../../lib/firebase";
+import { useEffect, useRef, useState } from "react";
+import { importKey, loadFileList, loadImage, putFileList, putImage, storage } from "../../lib/firebase";
 import { DecryptedImage } from "@/lib/decrypted-image";
 import styles from './page.module.css'
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { JobQueue } from "@/lib/job-queue";
+import { concat } from "@/lib/common";
+import { filetypeinfo } from "magic-bytes.js";
 
 export default function Album({ params }: { params: { slug: string[] } }) {
   const album_id = params.slug[0];
   const photo_id = params.slug[1];
-  const router = useRouter();
+
+  const readQueue = useRef(new JobQueue('read'));
+  const cryptoQueue = useRef(new JobQueue('crypto'));
+  const uploadQueue = useRef(new JobQueue('upload'));
 
   const [loading, setLoading] = useState(false);
   const [fileList, setFileList] = useState<string[]>([]);
   const [imageList, setImageList] = useState<DecryptedImage[]>([]);
   const [currentImage, setCurrentImage] = useState<DecryptedImage | null>();
+  const [showEdit, setShowEdit] = useState(false);
   const [showPhotoDateTime, setShowPhotoDateTime] = useState(false);
   const [showPhotoDetail, setShowPhotoDetail] = useState(false);
   const [showFullExif, setShowFullExif] = useState(false);
@@ -77,6 +82,69 @@ export default function Album({ params }: { params: { slug: string[] } }) {
     setCurrentImage(image);
   }
 
+  function append(event: React.ChangeEvent<HTMLInputElement>) {
+    const files = event.target.files;
+    if (!files) return;
+
+    for (const file of Array.from(files)) {
+      if (fileList.includes(file.name)) {
+        alert(`${file.name}はすでに追加されています`);
+        return
+      }
+    }
+
+    Array.from(files).forEach(file => {
+      read(file);
+    });
+  }
+
+  // ファイル読込
+  function read(file: File) {
+    readQueue.current.enqueue(async () => {
+      const buffer = await new Promise<ArrayBuffer>(resolve => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as ArrayBuffer);
+        reader.readAsArrayBuffer(file);
+      });
+      crypto({name: file.name, buffer});
+    });
+  }
+
+  // 暗号化
+  function crypto(file: {name: string, buffer: ArrayBuffer}) {
+    cryptoQueue.current.enqueue(async () => {
+      const hash = window.location.hash.substring(3);
+      const key = await importKey(hash);
+      const iv = window.crypto.getRandomValues(new Uint8Array(12));
+      const encrypted = await window.crypto.subtle.encrypt({
+        name: 'AES-GCM',
+        iv: iv,
+      }, key, file.buffer);
+
+      upload({...file, encryptedBuffer: concat(iv.buffer as ArrayBuffer, encrypted)});
+    });
+  }
+
+  // アップロード
+  function upload(file: {name: string, buffer: ArrayBuffer, encryptedBuffer: ArrayBuffer}) {
+    uploadQueue.current.enqueue(async () => {
+      const mime = filetypeinfo(Buffer.from(file.buffer))[0].mime;
+      if (!mime) throw new Error(`fileType unknown: ${file.name}`);
+      await putImage(album_id, file.name, file.encryptedBuffer, mime);
+      await appendFileList(file.name);
+      setImageList(prev => [...prev, new DecryptedImage(file.name, file.buffer)]);
+    });
+  }
+
+  // ファイルリストの更新
+  async function appendFileList(name: string) {
+    const newFileList = [...fileList, name].filter((x, i, self) => self.indexOf(x) === i); // 重複排除
+    setFileList(newFileList);
+    const hash = window.location.hash.substring(3);
+    const key = await importKey(hash);
+    await putFileList(album_id, newFileList, key);
+  }
+
   return (
     <div>
       {currentImage && (
@@ -84,10 +152,10 @@ export default function Album({ params }: { params: { slug: string[] } }) {
           <img src={currentImage.url} onClick={() => gotoPhoto(null)} />
         </div>
       )}
-      {/* <label>
-        <input type="checkbox" checked={showEdit} onChange={() => setShowEdit(!showEdit)} />
+      <label>
+        <input type="checkbox" checked={showEdit} onChange={() => setShowEdit(prev => !prev)} />
         編集
-      </label> */}
+      </label>
       <label>
         <input type="checkbox" checked={showPhotoDateTime} onChange={() => setShowPhotoDateTime(prev => !prev)} />
         撮影日時
@@ -107,6 +175,15 @@ export default function Album({ params }: { params: { slug: string[] } }) {
         <li>全画像数: {fileList.length}</li>
         <li>読み込み完了画像数: {imageList.length}</li>
       </ul>
+
+      {(showEdit || !fileList.length) && (
+        <div>
+          <p>
+            画像を選択
+            <input type="file" multiple onChange={append} />
+          </p>
+        </div>
+      )}
 
       <div className={styles["photo-list"]}>
         {imageList.map(image => (
