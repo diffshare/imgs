@@ -16,6 +16,8 @@ export default function Album({ params }: { params: { slug: string[] } }) {
   const [fileList, setFileList] = useState<string[]>([]);
   const [imageList, setImageList] = useState<DecryptedImage[]>([]);
   const [currentImage, setCurrentImage] = useState<DecryptedImage>();
+  const [showPhotoDetail, setShowPhotoDetail] = useState(false);
+  const [showFullExif, setShowFullExif] = useState(false);
 
   // カーソルキーによるナビゲーション
   useEffect(() => {
@@ -64,8 +66,6 @@ export default function Album({ params }: { params: { slug: string[] } }) {
           </Link>
         </div>
       )}
-      {/* 
-      <AppPhoto image={currentImage} album_id={album_id} /> */}
       {/* <label>
         <input type="checkbox" checked={showEdit} onChange={() => setShowEdit(!showEdit)} />
         編集
@@ -73,11 +73,17 @@ export default function Album({ params }: { params: { slug: string[] } }) {
       <label>
         <input type="checkbox" checked={showPhotoDateTime} onChange={() => setShowPhotoDateTime(!showPhotoDateTime)} />
         撮影日時
-      </label>
-      <label>
-        <input type="checkbox" checked={showPhotoDetail} onChange={() => setShowPhotoDetail(!showPhotoDetail)} />
-        写真詳細
       </label> */}
+      <label>
+        <input type="checkbox" checked={showPhotoDetail} onChange={() => setShowPhotoDetail(prev => !prev)} />
+        写真詳細
+      </label>
+      {showPhotoDetail && (
+        <label>
+          <input type="checkbox" checked={showFullExif} onChange={() => setShowFullExif(prev => !prev)} />
+          EXIF詳細
+        </label>
+      )}
       <ul>
         <li>読み込み処理中: {loading ? "Loading" : ""}</li>
         <li>全画像数: {fileList.length}</li>
@@ -97,6 +103,25 @@ export default function Album({ params }: { params: { slug: string[] } }) {
             {/* <a [href]="image?.originalImageUrl" download="{{image?.name}}">{{image?.name}}</a>
             <button (click)="delete(image)" *ngIf="editable">削除</button> */}
             </div>
+            {showPhotoDetail && (
+            <div>
+              Model: {image?.tags['Model']},
+              SS: {image?.exposureTime},
+              F: {image?.tags['FNumber']},
+              ISO: {image?.tags['ISOSpeedRatings']},
+              焦点距離: {image?.tags['FocalLength']}mm,
+              {image?.tags['ExposureBiasValue'] && (
+                <span>
+                焦点距離（35mm換算）: {image?.tags['FocalLengthIn35mmFilm']}mm
+                </span>
+              )}
+              {showFullExif && (
+                <div>
+                  {JSON.stringify(image?.tags)}
+                </div>
+              )}
+            </div>
+          )}
           </div>
         ))}
       </div>
