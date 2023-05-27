@@ -105,14 +105,14 @@ export default function Album({ params }: { params: { slug: string[] } }) {
             </div>
             {showPhotoDetail && (
             <div>
-              Model: {image?.tags['Model']},
-              SS: {image?.exposureTime},
-              F: {image?.tags['FNumber']},
-              ISO: {image?.tags['ISOSpeedRatings']},
-              焦点距離: {image?.tags['FocalLength']}mm,
-              {image?.tags['ExposureBiasValue'] && (
+              Model: {image.tags['Model']},
+              SS: {image.exposureTime},
+              F: {image.tags['FNumber']},
+              ISO: {image.tags['ISOSpeedRatings']},
+              焦点距離: {image.tags['FocalLength']}mm,
+              {image.tags['ExposureBiasValue'] && (
                 <span>
-                焦点距離（35mm換算）: {image?.tags['FocalLengthIn35mmFilm']}mm
+                焦点距離（35mm換算）: {image.tags['FocalLengthIn35mmFilm']}mm
                 </span>
               )}
               {showFullExif && (
