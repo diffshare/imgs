@@ -16,6 +16,7 @@ export default function Album({ params }: { params: { slug: string[] } }) {
   const [fileList, setFileList] = useState<string[]>([]);
   const [imageList, setImageList] = useState<DecryptedImage[]>([]);
   const [currentImage, setCurrentImage] = useState<DecryptedImage | null>();
+  const [showPhotoDateTime, setShowPhotoDateTime] = useState(false);
   const [showPhotoDetail, setShowPhotoDetail] = useState(false);
   const [showFullExif, setShowFullExif] = useState(false);
 
@@ -82,11 +83,11 @@ export default function Album({ params }: { params: { slug: string[] } }) {
       {/* <label>
         <input type="checkbox" checked={showEdit} onChange={() => setShowEdit(!showEdit)} />
         編集
-      </label>
-      <label>
-        <input type="checkbox" checked={showPhotoDateTime} onChange={() => setShowPhotoDateTime(!showPhotoDateTime)} />
-        撮影日時
       </label> */}
+      <label>
+        <input type="checkbox" checked={showPhotoDateTime} onChange={() => setShowPhotoDateTime(prev => !prev)} />
+        撮影日時
+      </label>
       <label>
         <input type="checkbox" checked={showPhotoDetail} onChange={() => setShowPhotoDetail(prev => !prev)} />
         写真詳細
@@ -114,6 +115,11 @@ export default function Album({ params }: { params: { slug: string[] } }) {
             {/* <a [href]="image?.originalImageUrl" download="{{image?.name}}">{{image?.name}}</a>
             <button (click)="delete(image)" *ngIf="editable">削除</button> */}
             </div>
+            {showPhotoDateTime && (image.tags['DateTimeOriginal'] || image.tags['DateTime']) && (
+              <div>
+                撮影日時: {image.tags['DateTimeOriginal'] || image.tags['DateTime']}
+              </div>
+            )}
             {showPhotoDetail && (
             <div>
               Model: {image.tags['Model']},
