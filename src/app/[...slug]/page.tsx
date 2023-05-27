@@ -42,14 +42,18 @@ export default function Album({ params }: { params: { slug: string[] } }) {
   useEffect(() => {
     const hash = window.location.hash.substring(3);
     async function load() {
-      setLoading(true);
-      const key = await importKey(hash);
-      const fileList = await loadFileList(album_id, key);
-      const imageList = await Promise.all(fileList.map(async name => {
-        return await loadImage(album_id, name, key);
-      }));
-      setFileList(fileList);
-      setImageList(imageList);
+      try {
+        setLoading(true);
+        const key = await importKey(hash);
+        const fileList = await loadFileList(album_id, key);
+        setFileList(fileList);
+        const imageList = await Promise.all(fileList.map(async name => {
+          return await loadImage(album_id, name, key);
+        }));
+        setImageList(imageList);
+      } catch (e) {
+
+      }
       setLoading(false);
     }
     load();

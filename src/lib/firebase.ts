@@ -1,5 +1,5 @@
 import { getApps, initializeApp } from 'firebase/app';
-import { getDownloadURL, getStorage, ref } from 'firebase/storage';
+import { getDownloadURL, getStorage, ref, getMetadata } from 'firebase/storage';
 import { DecryptedImage } from './decrypted-image';
 
 const firebaseConfig = {
@@ -164,4 +164,24 @@ export function importKey(key: string) {
     false, // whether the key is extractable (i.e. can be used in exportKey)
     ['encrypt', 'decrypt'] // can "encrypt", "decrypt", "wrapKey", or "unwrapKey"
   );
+}
+
+export async function checkAlbumName(albumName: string) {
+  try {
+    const albumRef = ref(storage, `${albumName}/filelist`);
+    const meta = await getMetadata(albumRef);
+    return false;
+  }
+  catch {    
+    return true;
+  }
+}
+
+export async function createKey() {
+  const key = await window.crypto.subtle.generateKey({
+    name: 'AES-GCM',
+    length: 256
+  }, true, ['encrypt', 'decrypt']);
+  const jwk = await window.crypto.subtle.exportKey('jwk', key);
+  return jwk.k;
 }
