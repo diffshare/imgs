@@ -15,7 +15,7 @@ export default function Album({ params }: { params: { slug: string[] } }) {
   const [loading, setLoading] = useState(false);
   const [fileList, setFileList] = useState<string[]>([]);
   const [imageList, setImageList] = useState<DecryptedImage[]>([]);
-  const [currentImage, setCurrentImage] = useState<DecryptedImage>();
+  const [currentImage, setCurrentImage] = useState<DecryptedImage | null>();
   const [showPhotoDetail, setShowPhotoDetail] = useState(false);
   const [showFullExif, setShowFullExif] = useState(false);
 
@@ -25,15 +25,17 @@ export default function Album({ params }: { params: { slug: string[] } }) {
       if (!currentImage) return;
       const index = fileList.indexOf(currentImage.name);
       if (event.key === 'ArrowRight') {
-        router.push(`/${album_id}/${fileList[Math.min(fileList.length - 1, index + 1)]}${window.location.hash}`);
+        const nextImage = imageList[Math.min(fileList.length - 1, index + 1)];
+        gotoPhoto(nextImage);
       }
       if (event.key === 'ArrowLeft') {
-        router.push(`/${album_id}/${fileList[Math.max(0, index - 1)]}${window.location.hash}`);
+        const nextImage = imageList[Math.max(0, index - 1)];
+        gotoPhoto(nextImage);
       }
     }
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [currentImage, album_id, fileList, router]);
+  }, [currentImage, fileList, imageList]);
 
   // アルバムの読込
   useEffect(() => {
@@ -57,13 +59,24 @@ export default function Album({ params }: { params: { slug: string[] } }) {
     setCurrentImage(imageList.filter(i => i.name === photo_id)[0]);
   }, [imageList, photo_id]);
 
+  // shallowナビゲーションを実装
+  // NOTE: 一枚画像の表示・非表示・カーソル移動でURLを変更するが、
+  //       コンポーネントの再読み込みは行わない。
+  function gotoPhoto(image: DecryptedImage | null) {
+    if (!image) {
+      window.history.pushState({}, "", `/${album_id}${window.location.hash}`);
+      setCurrentImage(null);
+        return;
+    }
+    window.history.pushState({}, "", `/${album_id}/${image.name}${window.location.hash}`);
+    setCurrentImage(image);
+  }
+
   return (
     <div>
       {currentImage && (
         <div className={styles.photo}>
-          <Link href={`/${album_id}${window.location.hash}`}>
-            <img src={currentImage.url} />
-          </Link>
+          <img src={currentImage.url} onClick={() => gotoPhoto(null)} />
         </div>
       )}
       {/* <label>
@@ -93,9 +106,7 @@ export default function Album({ params }: { params: { slug: string[] } }) {
       <div className={styles["photo-list"]}>
         {imageList.map(image => (
           <div key={image.url}>
-            <Link href={`/${album_id}/${image.name}${window.location.hash}`}>
-              <img src={image.url} />
-            </Link>
+            <img src={image.url} onClick={() => gotoPhoto(image)} />
             {/* // <img src="image?.url" *ngIf="image?.url" (click)="gotoPhoto(image)" /> */}
             <div>
               <a href={image.originalImageUrl}>{image.name}</a>
