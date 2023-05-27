@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react";
-import { importKey, loadFileList, loadImage, putFileList, putImage, storage } from "../../lib/firebase";
+import { deletePhoto, importKey, loadFileList, loadImage, putFileList, putImage, storage } from "../../lib/firebase";
 import { DecryptedImage } from "@/lib/decrypted-image";
 import styles from './page.module.css'
 import { JobQueue } from "@/lib/job-queue";
@@ -140,9 +140,26 @@ export default function Album({ params }: { params: { slug: string[] } }) {
   async function appendFileList(name: string) {
     const newFileList = [...fileList, name].filter((x, i, self) => self.indexOf(x) === i); // 重複排除
     setFileList(newFileList);
+    await updateFileList(newFileList);
+  }
+
+  async function updateFileList(newFileList: string[]) {
     const hash = window.location.hash.substring(3);
     const key = await importKey(hash);
     await putFileList(album_id, newFileList, key);
+  }
+
+  // ファイルの削除
+  async function deleteImage(image: DecryptedImage) {
+    const b = confirm(`${image.name}を削除しますか？`);
+    if (!b) return;
+
+    await deletePhoto(album_id, image.name);
+    setImageList(prev => prev.filter(i => i.name !== image.name));
+
+    const newFileList = fileList.filter(name => name !== image.name);
+    setFileList(newFileList);
+    await updateFileList(newFileList);
   }
 
   return (
@@ -192,9 +209,9 @@ export default function Album({ params }: { params: { slug: string[] } }) {
             {/* // <img src="image?.url" *ngIf="image?.url" (click)="gotoPhoto(image)" /> */}
             <div>
               <a href={image.originalImageUrl}>{image.name}</a>
-              {/* <button>削除</button> */}
-            {/* <a [href]="image?.originalImageUrl" download="{{image?.name}}">{{image?.name}}</a>
-            <button (click)="delete(image)" *ngIf="editable">削除</button> */}
+              {showEdit && (
+                <button onClick={() => deleteImage(image)}>削除</button>
+              )}
             </div>
             {showPhotoDateTime && (image.tags['DateTimeOriginal'] || image.tags['DateTime']) && (
               <div>

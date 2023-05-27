@@ -1,5 +1,5 @@
 import { getApps, initializeApp } from 'firebase/app';
-import { getDownloadURL, getStorage, ref, getMetadata, uploadBytes } from 'firebase/storage';
+import { getDownloadURL, getStorage, ref, getMetadata, uploadBytes, deleteObject } from 'firebase/storage';
 import { DecryptedImage } from './decrypted-image';
 import { concat, stringToBuffer } from './common';
 
@@ -119,3 +119,7 @@ export async function putFileList(album_id: string, fileList: string[], cryptoKe
   await uploadBytes(albumRef, concat(iv.buffer as ArrayBuffer, decrypted));
 }
 
+export async function deletePhoto(album_id: string, name: string) {
+  const imageRef = ref(storage, album_id + '/' + name);
+  await deleteObject(imageRef);
+}
