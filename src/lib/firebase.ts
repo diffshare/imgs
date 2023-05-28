@@ -39,7 +39,6 @@ export async function loadFileList(album_id: string, key: CryptoKey): Promise<st
   }, key, data);
   // this.validFileList = true;
   const textDecoder = new TextDecoder("utf-16");
-  // const json = bufferToString(decrypted);
   const json = textDecoder.decode(decrypted);
   console.log({ json });
   const fileList = JSON.parse(json);
