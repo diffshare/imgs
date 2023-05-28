@@ -7,6 +7,8 @@ import styles from './page.module.css'
 import { JobQueue } from "@/lib/job-queue";
 import { concat } from "@/lib/common";
 import { filetypeinfo } from "magic-bytes.js";
+import JSZip from "jszip";
+import FileSaver from "file-saver"
 
 export default function Album({ params }: { params: { slug: string[] } }) {
   const album_id = params.slug[0];
@@ -186,6 +188,16 @@ export default function Album({ params }: { params: { slug: string[] } }) {
     await updateFileList(newFileList);
   }
 
+  // すべての画像をzipしてダウンロード
+  async function downloadAsZip() {
+    const zip = new JSZip();
+    imageList.forEach(image => {
+      zip.file(image.name, image.decryptedData, {binary: true});
+    });
+    const zipFile = await zip.generateAsync({type:"blob"})
+    FileSaver.saveAs(zipFile, `Photos-${album_id}.zip`);
+  }
+
   return (
     <div>
       {currentImage && (
@@ -217,6 +229,12 @@ export default function Album({ params }: { params: { slug: string[] } }) {
             画像を選択
             <input type="file" multiple onChange={onChangeFile} />
           </p>
+        </div>
+      )}
+
+      {fileList.length && (
+        <div>
+          <button onClick={downloadAsZip}>すべての画像をzipでダウンロード</button>
         </div>
       )}
 
