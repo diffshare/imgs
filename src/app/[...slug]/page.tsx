@@ -77,7 +77,11 @@ export default function Album({ params }: { params: { slug: string[] } }) {
         // NOTE: Promise.allすると全てを読み込むまで反映しないので良くない
         fileList.forEach(async name => {
           const image = await loadImage(album_id, name, key);
-          setImageList(prev => [...prev, image]);
+          setImageList(prev => {
+            const images = [...prev, image];
+            // fileListによって定義された順番になるようにソートする
+            return fileList.map(name => images.filter(i => i.name === name)[0]).filter(i => i);
+          });
         });
       } catch (e) {
 
