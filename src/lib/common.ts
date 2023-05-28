@@ -6,7 +6,9 @@ export function concat(buffer1: ArrayBuffer, buffer2: ArrayBuffer): ArrayBuffer 
 }
 
 export function stringToBuffer(src: string): ArrayBufferLike {
-  return (new Uint16Array([].map.call(src, function (c) {
-    return c.charCodeAt(0);
-  }))).buffer;
+  const newArr = [];
+  for (let i = 0, len = src.length; i < len; ++i) {
+    newArr[i] = src.charCodeAt(i); // 0 ~ 65535;
+  }
+  return Uint16Array.from(newArr);
 }
