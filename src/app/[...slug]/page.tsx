@@ -38,8 +38,28 @@ export default function Album({ params }: { params: { slug: string[] } }) {
         gotoPhoto(nextImage);
       }
     }
+    function dragover(event: DragEvent) {
+      event.preventDefault();
+      // ドロップ可能にする
+      if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+    }
+    function drop(event: DragEvent) {
+      event.preventDefault();
+
+      const files = event.dataTransfer?.files;
+      if (!files || !files.length) return; // ファイルがない場合は何もしない
+
+      // ファイルがある場合は、ファイルを追加する
+      append(Array.from(files));
+    }
     window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    window.addEventListener('dragover', dragover);
+    window.addEventListener('drop', drop);
+    return () => {
+      window.removeEventListener('keydown', handler);
+      window.removeEventListener('dragover', dragover);
+      window.removeEventListener('drop', drop);
+    }
   }, [currentImage, fileList, imageList]);
 
   // アルバムの読込
@@ -81,11 +101,16 @@ export default function Album({ params }: { params: { slug: string[] } }) {
     setCurrentImage(image);
   }
 
-  function append(event: React.ChangeEvent<HTMLInputElement>) {
+  function onChangeFile(event: React.ChangeEvent<HTMLInputElement>) {
     const files = event.target.files;
     if (!files) return;
 
-    for (const file of Array.from(files)) {
+    append(Array.from(files));
+  }
+
+  function append(files: File[]) {
+
+    for (const file of files) {
       if (fileList.includes(file.name)) {
         alert(`${file.name}はすでに追加されています`);
         return
@@ -190,7 +215,7 @@ export default function Album({ params }: { params: { slug: string[] } }) {
         <div>
           <p>
             画像を選択
-            <input type="file" multiple onChange={append} />
+            <input type="file" multiple onChange={onChangeFile} />
           </p>
         </div>
       )}
