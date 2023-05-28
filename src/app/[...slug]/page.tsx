@@ -73,10 +73,12 @@ export default function Album({ params }: { params: { slug: string[] } }) {
         const key = await importKey(hash);
         const fileList = await loadFileList(album_id, key);
         setFileList(fileList);
-        const imageList = await Promise.all(fileList.map(async name => {
-          return await loadImage(album_id, name, key);
-        }));
-        setImageList(imageList);
+        // ファイルリストから順次画像を読み込む
+        // NOTE: Promise.allすると全てを読み込むまで反映しないので良くない
+        fileList.forEach(async name => {
+          const image = await loadImage(album_id, name, key);
+          setImageList(prev => [...prev, image]);
+        });
       } catch (e) {
 
       }
