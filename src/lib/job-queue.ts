@@ -34,6 +34,7 @@ export class JobQueue {
     async doTask() {
   
       while (this.q.length > 0) {
+        if (!this.starting) { break; } // stopが呼ばれたら終了
         this.log('doTask ' + this.q.length + ' ' + this.name);
         const first = this.q[0];
         await first();
