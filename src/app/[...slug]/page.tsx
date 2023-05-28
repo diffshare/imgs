@@ -23,7 +23,6 @@ export default function Album({ params }: { params: { slug: string[] } }) {
   const [showEdit, setShowEdit] = useState(false);
   const [showPhotoDateTime, setShowPhotoDateTime] = useState(false);
   const [showPhotoDetail, setShowPhotoDetail] = useState(false);
-  const [showFullExif, setShowFullExif] = useState(false);
 
   // カーソルキーによるナビゲーション
   useEffect(() => {
@@ -181,12 +180,6 @@ export default function Album({ params }: { params: { slug: string[] } }) {
         <input type="checkbox" checked={showPhotoDetail} onChange={() => setShowPhotoDetail(prev => !prev)} />
         写真詳細
       </label>
-      {showPhotoDetail && (
-        <label>
-          <input type="checkbox" checked={showFullExif} onChange={() => setShowFullExif(prev => !prev)} />
-          EXIF詳細
-        </label>
-      )}
       <ul>
         <li>読み込み処理中: {loading ? "Loading" : ""}</li>
         <li>全画像数: {fileList.length}</li>
@@ -230,9 +223,12 @@ export default function Album({ params }: { params: { slug: string[] } }) {
                 焦点距離（35mm換算）: {image.tags['FocalLengthIn35mmFilm']}mm
                 </span>
               )}
-              {showFullExif && (
+              <label>
+                <input type="checkbox" checked={image.showFullExif} onChange={() => {image.showFullExif = !image.showFullExif; setImageList([...imageList])}} />
+                EXIF
+              </label>
+              {image.showFullExif && (
                 <div>
-                  {/* {JSON.stringify(image?.tags)} */}
                   {JSON.stringify(image.exifr)}
                 </div>
               )}
