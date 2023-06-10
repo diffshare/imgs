@@ -109,6 +109,7 @@ export default function Album({ params }: { params: { slug: string[] } }) {
     setCurrentImage(image);
   }
 
+  // ファイル選択された場合の処理
   function onChangeFile(event: React.ChangeEvent<HTMLInputElement>) {
     const files = event.target.files;
     if (!files) return;
@@ -116,6 +117,7 @@ export default function Album({ params }: { params: { slug: string[] } }) {
     append(Array.from(files));
   }
 
+  // CloudStorageへのファイル追加処理
   function append(files: File[]) {
 
     for (const file of files) {
@@ -175,6 +177,7 @@ export default function Album({ params }: { params: { slug: string[] } }) {
     await updateFileList(newFileList);
   }
 
+  // メタデータの更新
   async function updateFileList(newFileList: string[]) {
     const hash = window.location.hash.substring(3);
     const key = await importKey(hash);
