@@ -235,6 +235,9 @@ export default function Album({ params }: { params: { slug: string[] } }) {
             画像を選択
             <input type="file" multiple onChange={onChangeFile} />
           </p>
+          <p>
+            画像のファイル名は公開情報になるので、秘匿すべき情報はファイル名に含まないこと。
+          </p>
         </div>
       )}
 
