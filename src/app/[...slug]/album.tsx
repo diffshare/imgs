@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react";
-import { deletePhoto, importKey, loadFileList, loadImage, putFileList, putImage, storage } from "../../lib/firebase";
+import { deleteFileList, deletePhoto, importKey, loadFileList, loadImage, pushFileList, putImage, storage } from "../../lib/firebase";
 import { DecryptedImage } from "@/lib/decrypted-image";
 import styles from './page.module.css'
 import { JobQueue } from "@/lib/job-queue";
@@ -172,16 +172,16 @@ export default function Album({ params }: { params: { slug: string[] } }) {
 
   // ファイルリストの更新
   async function appendFileList(name: string) {
-    const newFileList = [...fileList, name].filter((x, i, self) => self.indexOf(x) === i); // 重複排除
-    setFileList(newFileList);
-    await updateFileList(newFileList);
+    // 重複排除
+    setFileList(prev =>  [...prev, name].filter((x, i, self) => self.indexOf(x) === i));
+    await updateFileList(name);
   }
 
   // メタデータの更新
-  async function updateFileList(newFileList: string[]) {
+  async function updateFileList(newFile: string) {
     const hash = window.location.hash.substring(3);
     const key = await importKey(hash);
-    await putFileList(album_id, newFileList, key);
+    await pushFileList(album_id, newFile, key);
   }
 
   // ファイルの削除
@@ -194,7 +194,10 @@ export default function Album({ params }: { params: { slug: string[] } }) {
 
     const newFileList = fileList.filter(name => name !== image.name);
     setFileList(newFileList);
-    await updateFileList(newFileList);
+
+    const hash = window.location.hash.substring(3);
+    const key = await importKey(hash);
+    await deleteFileList(album_id, image.name, key);
   }
 
   // すべての画像をzipしてダウンロード
