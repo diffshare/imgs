@@ -106,8 +106,20 @@ export async function putImage(album_id: string, name: string, encryptedBuffer: 
   await uploadBytes(imageRef, encryptedBuffer, { contentType });
 }
 
-export async function putFileList(album_id: string, fileList: string[], cryptoKey: CryptoKey) {
-  const json = JSON.stringify(fileList);
+// filelistに追加
+export async function pushFileList(album_id: string, file: string, cryptoKey: CryptoKey) {
+  let json: string;
+  let newFileList: string[] = [];
+  try {
+    const fileList = await loadFileList(album_id, cryptoKey);
+    newFileList = [...fileList, file];
+    json = JSON.stringify(newFileList);
+  } catch {
+    // 存在しない場合は上書きする
+    newFileList = [file];
+    json = JSON.stringify(newFileList);
+  }
+
   const iv = window.crypto.getRandomValues(new Uint8Array(12));
   const decrypted = await window.crypto.subtle.encrypt({
     name: 'AES-GCM',
@@ -116,6 +128,33 @@ export async function putFileList(album_id: string, fileList: string[], cryptoKe
 
   const albumRef = ref(storage, `${album_id}/filelist`);
   await uploadBytes(albumRef, concat(iv.buffer as ArrayBuffer, decrypted));
+
+  return newFileList;
+}
+
+// filelistから削除
+export async function deleteFileList(album_id: string, file: string, cryptoKey: CryptoKey) {
+  let json: string;
+  let newFileList: string[];
+  try {
+    const fileList = await loadFileList(album_id, cryptoKey);
+    newFileList = fileList.filter(name => name !== file);
+    json = JSON.stringify(newFileList);
+  } catch {
+    // 存在しない場合は何もしない
+    return null;
+  }
+
+  const iv = window.crypto.getRandomValues(new Uint8Array(12));
+  const decrypted = await window.crypto.subtle.encrypt({
+    name: 'AES-GCM',
+    iv: iv,
+  }, cryptoKey, stringToBuffer(json) as ArrayBuffer);
+
+  const albumRef = ref(storage, `${album_id}/filelist`);
+  await uploadBytes(albumRef, concat(iv.buffer as ArrayBuffer, decrypted));
+
+  return newFileList;
 }
 
 export async function deletePhoto(album_id: string, name: string) {
