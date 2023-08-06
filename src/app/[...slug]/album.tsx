@@ -11,7 +11,7 @@ import JSZip from "jszip";
 import FileSaver from "file-saver"
 
 export default function Album({ params }: { params: { slug: string[] } }) {
-  const album_id = params.slug[0];
+  const album_id = params.slug[0] && decodeURIComponent(params.slug[0]);
   const photo_id = params.slug[1];
 
   const readQueue = useRef(new JobQueue('read'));
