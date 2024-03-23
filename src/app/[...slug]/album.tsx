@@ -270,12 +270,12 @@ export default function Album({ params }: { params: { slug: string[] } }) {
             <div>
               Model: {image.tags['Model']},
               SS: {image.exposureTime},
-              F: {image.tags['FNumber']},
-              ISO: {image.tags['ISOSpeedRatings']},
-              焦点距離: {image.tags['FocalLength']}mm,
+              F: {image.tags['FNumber']?.toString()},
+              ISO: {image.tags['ISOSpeedRatings']?.toString()},
+              焦点距離: {image.tags['FocalLength']?.toString()}mm,
               {image.tags['ExposureBiasValue'] && (
                 <span>
-                焦点距離（35mm換算）: {image.tags['FocalLengthIn35mmFilm']}mm
+                焦点距離（35mm換算）: {image.tags['FocalLengthIn35mmFilm']?.toString()}mm
                 </span>
               )}
               <label>
