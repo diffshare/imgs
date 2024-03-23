@@ -10,6 +10,14 @@
     width: 300px;
     image-orientation: from-image;
 }
+.photo-list a:link:hover {
+  color: blue;
+  text-decoration: underline;
+}
+.photo-list a:link:active {
+  color: red;
+  text-decoration: underline;
+}
 .photo {
   position: fixed;
   left: 0;
