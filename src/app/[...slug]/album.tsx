@@ -256,7 +256,7 @@ export default function Album({ params }: { params: { slug: string[] } }) {
             <img src={image.url} onClick={() => gotoPhoto(image)} />
             {/* // <img src="image?.url" *ngIf="image?.url" (click)="gotoPhoto(image)" /> */}
             <div>
-              <a href={image.originalImageUrl}>{image.name}</a>
+              <a href={image.originalImageUrl} download={image.name}>{image.name}</a>
               {showEdit && (
                 <button onClick={() => deleteImage(image)}>削除</button>
               )}
