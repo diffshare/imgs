@@ -268,14 +268,18 @@ export default function Album({ params }: { params: { slug: string[] } }) {
             )}
             {showPhotoDetail && (
             <div>
-              Model: {image.tags['Model']},
-              SS: {image.exposureTime},
-              F: {image.tags['FNumber']?.toString()},
-              ISO: {image.tags['ISOSpeedRatings']?.toString()},
-              焦点距離: {image.tags['FocalLength']?.toString()}mm,
-              {image.tags['ExposureBiasValue'] && (
+              Model: {image.tags['Model'] ?? '-'},
+              SS: {image.exposureTime ?? '-'},
+              F: {image.tags['FNumber']?.toString() ?? '-'},
+              ISO: {image.tags['ISOSpeedRatings']?.toString() ?? '-'},
+              {image.tags['FocalLength'] && (
                 <span>
-                焦点距離（35mm換算）: {image.tags['FocalLengthIn35mmFilm']?.toString()}mm
+                焦点距離: {image.tags['FocalLength'].toString()}mm
+                </span>
+              )}
+              {image.tags['FocalLengthIn35mmFilm'] && (
+                <span>
+                焦点距離（35mm換算）: {image.tags['FocalLengthIn35mmFilm'].toString()}mm
                 </span>
               )}
               <label>
