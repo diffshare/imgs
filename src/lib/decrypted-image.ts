@@ -33,22 +33,17 @@ export class DecryptedImage {
       // https://drafts.csswg.org/css-images-3/#the-image-orientation
       // https://drafts.csswg.org/css-images-4/#image-notation
     } else {
-      const tags = this.tags;
-      if (tags && tags['Orientation'] && tags['Orientation'] !== 1) {
-        const rotated = await rotate(this.originalImageUrl, tags);
+      if (this.tags?.['Orientation'] !== 1) {
+        const rotated = await rotate(this.originalImageUrl, this.tags);
         this.url = rotated;
       } else {
         // canvas.toBlob() (this.rotate())は重い処理なので不要な場合（Orientation=1）は行わない
       }
-    }  
+    }
   }
 
   get orientation(): number | null {
-    if (this.tags == null) {
-      return null;
-    }
-
-    return this.tags['Orientation'];
+    return this.tags?.['Orientation'];
   }
 
   get exposureTime(): string | null {
