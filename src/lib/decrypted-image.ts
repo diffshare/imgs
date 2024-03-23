@@ -47,16 +47,14 @@ export class DecryptedImage {
   }
 
   get exposureTime(): string | null {
-    if (this.tags == null) {
+    const exposureTime = this.tags?.['ExposureTime'];
+    if (exposureTime == null) {
       return null;
+    } else if (exposureTime.denominator == 1) { // 1秒以上のとき
+      return exposureTime.numerator.toString();
+    } else {
+      return `${exposureTime.numerator}/${exposureTime.denominator}`
     }
-
-    // 1秒以上のときはそのまま
-    if (this.tags['ExposureTime'] >= 1) {
-      return this.tags['ExposureTime'];
-    }
-
-    return '1/' + (1 / this.tags['ExposureTime']);
   }
 }
 
